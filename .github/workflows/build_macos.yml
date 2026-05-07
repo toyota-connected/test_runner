@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Build MacOS
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_ubuntu2004.yml
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_ubuntu2004.yml
+  workflow_dispatch:
+
+jobs:
+  run:
+    env:
+      NONINTERACTIVE: 1
+      HOMEBREW_NO_AUTO_UPDATE: 1
+
+    runs-on: 
+      - macos-15
+
+    if: "!contains(github.event.pull_request.labels.*.name, 'ci: skip macos') && !contains(github.event.head_commit.message, '[skip macos]')"
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Environment
+        run: |
+          echo "Running on macOS version: $(sw_vers -productVersion)"
+          echo "Running on architecture: $(uname -m)"
+          echo "Current directory: $(pwd)"
+          echo "Environment variables:"
+          env
+          
+      - name: Brew fixup
+        run: |
+          brew upgrade |true
+          brew cleanup |true
+          brew doctor |true
+          ruby -v
+
+      - name: Configure CMake
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_CAPNP=ON \
+            -DBUILD_SERVER=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 
+
+      - name: Build
+        run: |
+          export C_INCLUDE_PATH=/usr/local/include
+          export CPLUS_INCLUDE_PATH=/usr/local/include
+          export LIBRARY_PATH=/usr/local/lib
+          cmake --build build
+
+      - name: Publish Binary
+        uses: actions/upload-artifact@v4
+        with:
+            name: test_runner_client_macos15
+            path: |
+              build/libTestRunnerClient.dylib
+              build/TestRunnerClientTest
+              build/third_party/spdlog-1.12.0/libspdlog.a

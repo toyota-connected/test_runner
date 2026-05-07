@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: clang-tidy
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  clang-tidy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake \
+            clang clang-tidy \
+            libwayland-dev libinput-dev libudev-dev \
+            autoconf automake libtool
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DBUILD_SERVER=ON \
+            -DBUILD_CAPNP=ON
+
+      # Generate capnp headers so clang-tidy can resolve all includes.
+      - name: Generate capnp headers
+        run: cmake --build build --target capnp_generated
+
+      - name: Run clang-tidy
+        run: |
+          # Run against all first-party source files; exclude third_party, test,
+          # and generated capnp files.
+          find recorder server client plugins \
+            -name "*.cpp" \
+            ! -path "*/test/*" \
+            | sort \
+            | xargs clang-tidy \
+                -p build/compile_commands.json \
+                --warnings-as-errors="" \
+                2>&1 | tee clang_tidy_output.txt
+          # Exit non-zero if clang-tidy reported any warnings.
+          if grep -qE "warning:|error:" clang_tidy_output.txt; then
+            echo "clang-tidy found issues (see above)"
+            exit 1
+          fi
+
+      - name: Upload clang-tidy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-report
+          path: clang_tidy_output.txt
+          retention-days: 14
+

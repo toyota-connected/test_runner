@@ -1,0 +1,6 @@
+build*/
+
+third_party/capnproto-c++-0.9.1/Makefile
+third_party/capnproto-c++-0.9.1/config.log
+third_party/capnproto-c++-0.9.1/config.status
+third_party/capnproto-c++-0.9.1/libtool

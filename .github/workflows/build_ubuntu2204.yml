@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Build Ubuntu 22.04
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install runtime packages
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libwayland-dev libinput-dev build-essential cmake \
+            autoconf automake libtool
+
+      - name: Configure CMake
+        run: |
+          mkdir build && cd build
+          cmake .. -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Publish Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_runner_linux
+          path: |
+            build/libTestRunnerClient.so
+            build/TestRunnerClientTest
+            build/TestRunner-Server
+            build/libTestRunnerServer.so
+            build/libTestRunnerRecorder.so
+            build/TestRunner-Recorder
+            build/third_party/spdlog-1.12.0/libspdlog.a

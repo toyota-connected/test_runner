@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Sanitizers (ASan + UBSan)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  asan:
+    name: AddressSanitizer
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake \
+            libwayland-dev libinput-dev libudev-dev \
+            libgtest-dev libgmock-dev \
+            libasan5 \
+            autoconf automake libtool
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address" \
+            -DBUILD_SERVER=ON \
+            -DBUILD_CAPNP=ON \
+            -DBUILD_UNIT_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Run tests under ASan
+        env:
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:detect_leaks=1
+          # LeakSanitizer requires ptrace; disable if unavailable in the runner.
+          # To suppress false positives from third-party libs, add a suppression
+          # file: LSAN_OPTIONS=suppressions=.lsan_suppressions
+        run: |
+          cd build
+          ./test/unit/test_runner_unit_tests \
+            --gtest_output="xml:test_results_asan.xml" \
+            2>&1 | tee asan_output.txt
+
+      - name: Upload ASan output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-output
+          path: |
+            build/asan_output.txt
+            build/test_results_asan.xml
+          retention-days: 14
+
+
+  ubsan:
+    name: UndefinedBehaviorSanitizer
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake \
+            libwayland-dev libinput-dev libudev-dev \
+            libgtest-dev libgmock-dev \
+            libubsan1 \
+            autoconf automake libtool
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover=all" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined" \
+            -DBUILD_SERVER=ON \
+            -DBUILD_CAPNP=ON \
+            -DBUILD_UNIT_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Run tests under UBSan
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1
+        run: |
+          cd build
+          ./test/unit/test_runner_unit_tests \
+            --gtest_output="xml:test_results_ubsan.xml" \
+            2>&1 | tee ubsan_output.txt
+
+      - name: Upload UBSan output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubsan-output
+          path: |
+            build/ubsan_output.txt
+            build/test_results_ubsan.xml
+          retention-days: 14
+

@@ -1,0 +1,124 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Unit Tests & Coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake \
+            libwayland-dev libinput-dev libudev-dev \
+            libgtest-dev libgmock-dev \
+            lcov \
+            autoconf automake libtool
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_SERVER=ON \
+            -DBUILD_CAPNP=ON \
+            -DBUILD_UNIT_TESTS=ON \
+            -DENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Capture baseline counters
+        run: cmake --build build --target coverage_baseline
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ./test/unit/test_runner_unit_tests \
+            --gtest_output="xml:test_results.xml" \
+            2>&1 | tee test_output.txt
+
+      - name: Generate coverage report
+        run: cmake --build build --target coverage
+
+      - name: Summarise results
+        if: always()
+        run: |
+          cd build
+          echo "## Unit Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse the XML for a pass/fail summary
+          total=$(grep -oP 'tests="\K[0-9]+' test_results.xml | head -1 || echo 0)
+          failures=$(grep -oP 'failures="\K[0-9]+' test_results.xml | head -1 || echo 0)
+          errors=$(grep -oP 'errors="\K[0-9]+' test_results.xml | head -1 || echo 0)
+          passed=$(( total - failures - errors ))
+
+          if [ "$failures" -eq 0 ] && [ "$errors" -eq 0 ]; then
+            echo "✅ **$passed / $total tests passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **$passed / $total tests passed** ($failures failures, $errors errors)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          lcov --summary coverage.info 2>&1 | grep -E "lines|functions|branches" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Per-file coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Lines | Functions |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+          lcov --list coverage.info 2>&1 \
+            | grep -E "\.(cpp|h)\s" \
+            | awk -F'|' '{
+                file=$1; lines=$2; funcs=$3;
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", file);
+                match(lines, /[0-9.]+%|[0-9]+%/); lp=substr(lines, RSTART, RLENGTH);
+                match(funcs, /[0-9.]+%|[0-9]+%/); fp=substr(funcs, RSTART, RLENGTH);
+                printf "| %s | %s | %s |\n", file, lp, fp
+              }' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/coverage_html/
+          retention-days: 30
+
+      - name: Upload test results XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test_results.xml
+          retention-days: 30
+
+      - name: Fail if tests failed
+        run: |
+          cd build
+          failures=$(grep -oP 'failures="\K[0-9]+' test_results.xml | head -1 || echo 0)
+          errors=$(grep -oP 'errors="\K[0-9]+' test_results.xml | head -1 || echo 0)
+          if [ "$failures" -ne 0 ] || [ "$errors" -ne 0 ]; then
+            echo "Tests failed: $failures failures, $errors errors"
+            exit 1
+          fi
+

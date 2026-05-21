@@ -7,21 +7,28 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
-      - .github/workflows/build_ubuntu2004.yml
+      - .github/workflows/build_linux.yml
+      - .github/workflows/build_windows.yml
   pull_request:
     branches: [ "main" ]
     paths-ignore:
-      - .github/workflows/build_ubuntu2004.yml
+      - .github/workflows/build_linux.yml
+      - .github/workflows/build_windows.yml
   workflow_dispatch:
 
 jobs:
   run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+        compiler: [gcc, clang]
+
     env:
       NONINTERACTIVE: 1
       HOMEBREW_NO_AUTO_UPDATE: 1
 
-    runs-on: 
-      - macos-15
+    runs-on: ${{ matrix.os }}
 
     if: "!contains(github.event.pull_request.labels.*.name, 'ci: skip macos') && !contains(github.event.head_commit.message, '[skip macos]')"
 
@@ -37,7 +44,7 @@ jobs:
           echo "Current directory: $(pwd)"
           echo "Environment variables:"
           env
-          
+
       - name: Brew fixup
         run: |
           brew upgrade |true
@@ -45,15 +52,29 @@ jobs:
           brew doctor |true
           ruby -v
 
-      - name: Configure CMake
+      - name: Configure CMake (gcc)
+        if: matrix.compiler == 'gcc'
         run: |
           mkdir build && cd build
           cmake .. \
+            -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
             -DBUILD_EXAMPLES=OFF \
             -DBUILD_TESTING=OFF \
             -DBUILD_CAPNP=ON \
             -DBUILD_SERVER=OFF \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+      - name: Configure CMake (clang)
+        if: matrix.compiler == 'clang'
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_CAPNP=ON \
+            -DBUILD_SERVER=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
       - name: Build
         run: |
@@ -65,7 +86,7 @@ jobs:
       - name: Publish Binary
         uses: actions/upload-artifact@v4
         with:
-            name: test_runner_client_macos15
+            name: test_runner_client_${{ matrix.os }}_${{ matrix.compiler }}
             path: |
               build/libTestRunnerClient.dylib
               build/TestRunnerClientTest

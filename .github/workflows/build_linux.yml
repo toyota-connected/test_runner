@@ -1,22 +1,30 @@
 # SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 # SPDX-License-Identifier: GPLv3
 
-name: Build Ubuntu 22.04
+name: Build Linux
 
 on:
   push:
     branches: [ "main" ]
     paths-ignore:
       - .github/workflows/build_macos.yml
+      - .github/workflows/build_windows.yml
   pull_request:
     branches: [ "main" ]
     paths-ignore:
       - .github/workflows/build_macos.yml
+      - .github/workflows/build_windows.yml
 
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
+        compiler: [gcc, clang]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -27,12 +35,23 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             libwayland-dev libinput-dev build-essential cmake \
-            autoconf automake libtool
+            autoconf automake libtool clang
 
-      - name: Configure CMake
+      - name: Configure CMake (gcc)
+        if: matrix.compiler == 'gcc'
         run: |
           mkdir build && cd build
-          cmake .. -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+          cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
+            -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+
+      - name: Configure CMake (clang)
+        if: matrix.compiler == 'clang'
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
 
       - name: Build
         run: cmake --build build --parallel $(nproc)
@@ -40,7 +59,7 @@ jobs:
       - name: Publish Binary
         uses: actions/upload-artifact@v4
         with:
-          name: test_runner_linux
+          name: test_runner_linux_${{ matrix.os }}_${{ matrix.compiler }}
           path: |
             build/libTestRunnerClient.so
             build/TestRunnerClientTest

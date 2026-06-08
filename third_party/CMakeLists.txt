@@ -12,9 +12,6 @@ add_subdirectory(spdlog-1.12.0 EXCLUDE_FROM_ALL)
 #
 # capnproto
 if(BUILD_CAPNP)
-	execute_process(COMMAND ./configure
-				WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/capnproto-c++-0.9.1)
-
 	set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-	add_subdirectory(capnproto-c++-0.9.1 EXCLUDE_FROM_ALL)
+	add_subdirectory(capnproto-1.4.0/c++ EXCLUDE_FROM_ALL)
 endif()

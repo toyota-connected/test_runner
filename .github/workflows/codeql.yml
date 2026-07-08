@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze (c-cpp)
+    runs-on: ubuntu-22.04
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libwayland-dev libinput-dev build-essential cmake \
+            autoconf automake libtool
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+          queries: security-and-quality
+
+      - name: Configure and Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+          cmake --build . --parallel $(nproc)
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:c-cpp

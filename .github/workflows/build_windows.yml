@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Build Windows
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+      - .github/workflows/build_linux.yml
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+      - .github/workflows/build_linux.yml
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+        compiler: [msvc, clang]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LLVM/Clang
+        if: matrix.compiler == 'clang'
+        run: choco install llvm --yes
+
+      - name: Configure CMake (msvc)
+        if: matrix.compiler == 'msvc'
+        shell: pwsh
+        run: |
+          mkdir build
+          cmake -S . -B build `
+            -DBUILD_EXAMPLES=OFF `
+            -DBUILD_TESTING=OFF `
+            -DBUILD_CAPNP=ON `
+            -DBUILD_SERVER=OFF `
+            -DBUILD_RECORDER=OFF `
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+      - name: Configure CMake (clang)
+        if: matrix.compiler == 'clang'
+        shell: pwsh
+        run: |
+          mkdir build
+          cmake -S . -B build `
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ `
+            -DBUILD_EXAMPLES=OFF `
+            -DBUILD_TESTING=OFF `
+            -DBUILD_CAPNP=ON `
+            -DBUILD_SERVER=OFF `
+            -DBUILD_RECORDER=OFF `
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Publish Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_runner_client_${{ matrix.os }}_${{ matrix.compiler }}
+          path: |
+            build/TestRunnerClient.dll
+            build/TestRunnerClientTest.exe
+            build/third_party/spdlog-1.12.0/libspdlog.a

@@ -20,7 +20,7 @@ target_include_directories(test_runner_unit_tests PRIVATE
         ${CMAKE_SOURCE_DIR}/test/mocks
         ${CMAKE_BINARY_DIR}
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/third_party/capnproto-c++-0.9.1/src
+        ${CMAKE_SOURCE_DIR}/third_party/capnproto-1.4.0/c++/src
         ${CMAKE_SOURCE_DIR}/third_party/spdlog-1.12.0/include
 )
 

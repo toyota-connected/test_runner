@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+
+name: Build Linux
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+      - .github/workflows/build_windows.yml
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/build_macos.yml
+      - .github/workflows/build_windows.yml
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
+        compiler: [gcc, clang]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install runtime packages
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libwayland-dev libinput-dev build-essential cmake \
+            autoconf automake libtool clang
+
+      - name: Configure CMake (gcc)
+        if: matrix.compiler == 'gcc'
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
+            -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+
+      - name: Configure CMake (clang)
+        if: matrix.compiler == 'clang'
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON \
+            -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Publish Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_runner_linux_${{ matrix.os }}_${{ matrix.compiler }}
+          path: |
+            build/libTestRunnerClient.so
+            build/TestRunnerClientTest
+            build/TestRunner-Server
+            build/libTestRunnerServer.so
+            build/libTestRunnerRecorder.so
+            build/TestRunner-Recorder
+            build/third_party/spdlog-1.12.0/libspdlog.a

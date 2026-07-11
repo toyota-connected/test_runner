@@ -1,0 +1,174 @@
+# A self-describing package manifest for the emb CLI.
+#
+# Build it natively on this host (host compiler + system libraries) with the
+# built-in `local` target — `emb cross <file> --target local` uses the file's
+# parent dir as the CMake source, so this manifest lives at the repo root:
+#
+#     emb cross emb.yaml --target local --build
+#
+# Install the host build deps below first (coalesced across every discovered
+# package, filtered to what's missing, installed in one transaction):
+#
+#     emb deps --packages ..  --yes        # scans sibling dirs for emb.yaml
+#
+# The `cross.defines` reproduce the canonical Linux build
+# (.github/workflows/build_ubuntu2204.yml): server + recorder + examples, with
+# the vendored capnproto 0.9.1 under third_party/ (BUILD_CAPNP=ON). Override any
+# of them per invocation with `-D`, e.g. a client-only build:
+#
+#     emb cross emb.yaml --target local --build \
+#       -D BUILD_SERVER=OFF -D BUILD_EXAMPLES=OFF
+id: test_runner
+type: app
+supported_archs: [arm64, x86_64]
+supported_host_types: [fedora, ubuntu]
+
+cross:
+  # `provider:` is required for the cross: block to parse; it is ignored for the
+  # native `--target local` build (which uses the host toolchain, no sysroot).
+  provider: arm-gnu
+  # Shared build-system -D defines, applied to every build: the native `local`
+  # build and each cross target below.
+  defines:
+    BUILD_SERVER: 'ON'
+    BUILD_RECORDER: 'ON'
+    BUILD_EXAMPLES: 'ON'
+    BUILD_TESTING: 'OFF'
+    BUILD_CAPNP: 'ON'          # build the vendored capnproto 0.9.1 (third_party/)
+
+  # `emb cross emb.yaml --build --deb` packages this binary into a .deb under
+  # <buildRoot>/dist. Depends is auto-derived from the binary's DT_NEEDED
+  # (libudev1, libc6, libstdc++6, …); the vendored capnproto/spdlog are linked
+  # statically, so they pull no runtime dependency. The two in-tree shared libs
+  # the server loads (libTestRunnerServer.so, libTestRunnerRecorder.so) ship
+  # alongside it under /usr/lib via cmake install(), collected by `files:`.
+  package:
+    name: test-runner
+    version: 0.1.0
+    maintainer: "Matt Everett <M.Everett.90@gmail.com>"
+    description: "Remote test runner server for ivi-homescreen (cross-built by emb)"
+    section: utils
+    bin: TestRunner-Server
+    install_dir: /usr/bin
+    # Ship the binary's in-tree .so closure (libTestRunnerServer.so,
+    # libTestRunnerRecorder.so) under /usr/lib/<multiarch>/ so the single-binary
+    # package is runnable. Sysroot/system libs stay out — see depends: below.
+    bundle_libs: true
+    # The target capnp/kj runtimes come from the device's Debian repo; declare
+    # them so `apt-get install ./test-runner.deb` pulls them. (auto-depends can't
+    # derive these: emb extracts the -dev packages root-free, so the sonames
+    # aren't in the sysroot's dpkg db.) Confirm the exact name on trixie with
+    # `apt-cache policy` if apt can't find it.
+    depends:
+      - libcapnp-1.1.0
+
+  # Cross targets, one per board. Build with `emb cross emb.yaml --target <name>
+  # --build`; `--target local` (the default) still does the native host build
+  # above. Each `extends: <board>` picks the hardware layer from emb's shipped
+  # board library (boards/raspberry-pi.emb.yaml): ARM GNU toolchain 15.2.rel1
+  # (gcc 15 / glibc 2.41), the raspios-trixie sysroot image, rootfs partition,
+  # CPU tuning, and the base GUI/input stack (which already covers libwayland-dev,
+  # libinput-dev, libudev-dev that the server links). spdlog is vendored and
+  # cross-built (header/static, no sysroot dep).
+  #
+  # The boards differ ONLY in CPU tuning — rpi4-trixie is Cortex-A72 (armv8-a),
+  # rpi5-trixie is Cortex-A76 (armv8.2-a). Build the one that matches the actual
+  # device: an A76 build emits armv8.1+ instructions (e.g. `ldapr`) that an A72
+  # traps as SIGILL. The app layer (defines/augment/sysroot) is identical across
+  # boards, shared here via YAML anchors on rpi4-trixie.
+  targets:
+    # Raspberry Pi 4 (Cortex-A72). Carries the shared app-layer anchors.
+    rpi4-trixie:
+      extends: rpi4-trixie
+
+      # Target `defines` REPLACE the shared set above (the shared→target merge is
+      # shallow), so the full set is restated here. The one change vs. the native
+      # build is BUILD_CAPNP=OFF: capnp is both a build-time schema compiler AND a
+      # runtime library. Building it for the target (BUILD_CAPNP=ON) produces an
+      # aarch64 `capnp`/`capnpc-c++` that CMake then can't run on the x86_64 host
+      # (qemu can't find the aarch64 loader) — the codegen step fails. So use a
+      # HOST capnp (augment below) for codegen + the TARGET libcapnp from the
+      # sysroot for the headers/link, exactly as the CMakeLists' `if(NOT
+      # BUILD_CAPNP)` path intends. FOUND_LIBATOMIC pre-seeds a cache var so
+      # Debian's CapnProtoConfig.cmake skips a check_library_exists(atomic …)
+      # probe that fails to *compile* under gcc 15 (it declares `char
+      # __atomic_load_8()`, ambiguating the builtin) and aborts with a bogus
+      # "libatomic not found".
+      defines: &trixie_defines
+        BUILD_SERVER: 'ON'
+        BUILD_RECORDER: 'ON'
+        BUILD_EXAMPLES: 'ON'
+        BUILD_TESTING: 'OFF'
+        BUILD_CAPNP: 'OFF'
+        FOUND_LIBATOMIC: 'ON'
+
+      # Host-native capnp 1.1.0 codegen tool (`capnp` + `capnpc-c++`), built with
+      # the host compiler and prepended to the cross build's PATH so the project's
+      # `find_program(capnp)` / `find_program(capnpc-c++)` resolve it. Same
+      # host-tool pattern ivi-homescreen uses for wayland-cxx-scanner. The version
+      # MUST match the target libcapnp (trixie ships 1.1.0): capnp's generated
+      # headers enforce an exact CAPNP_VERSION match between compiler and runtime,
+      # so a host 1.0.x + target 1.1.0 mix would `#error` at compile time.
+      augment: &trixie_augment
+        - pkg: capnproto
+          min: "1.1.0"                     # also the extracted source-dir name
+          url: https://capnproto.org/capnproto-c++-1.1.0.tar.gz
+          build: cmake
+          host: true
+          defines:
+            BUILD_TESTING: 'OFF'
+
+      # Target capnproto (1.1.0) for `find_package(CapnProto)` + link. Unions with
+      # the board's base dev_packages (which already cover wayland/input/udev).
+      # The libatomic.so symlink: CapnProtoConfig.cmake link-probes `-latomic`
+      # (aarch64 needs libatomic for 64-bit atomics), but the image sysroot ships
+      # only the versioned libatomic.so.1 under the multiarch dir (the unversioned
+      # dev symlink lives in gcc's private dir, off the linker's default search
+      # path). Add the standard dev symlink; the binary's NEEDED stays
+      # libatomic.so.1, which is present on the device.
+      sysroot: &trixie_sysroot
+        dev_packages:
+          - libcapnp-dev
+        symlinks:
+          usr/lib/aarch64-linux-gnu/libatomic.so: libatomic.so.1
+
+    # Raspberry Pi 5 (Cortex-A76). Same app layer as rpi4-trixie; only the board
+    # (toolchain tuning / image) differs.
+    rpi5-trixie:
+      extends: rpi5-trixie
+      defines: *trixie_defines
+      augment: *trixie_augment
+      sysroot: *trixie_sysroot
+
+# Host build dependencies, keyed by OS then (on Linux) distro id. `emb deps`
+# coalesces these across all discovered packages, filters to what's missing on
+# the host, and installs the union in one PackageKit (Linux) transaction.
+#
+#  - wayland + libinput + libudev: the server links wayland-client / udev and
+#    (optionally) libinput for the recorder.
+#  - pkg-config: the server's `pkg_check_modules(wayland-client)`.
+#  - autoconf/automake/libtool: the vendored capnproto 0.9.1 runs `./configure`
+#    when BUILD_CAPNP=ON.
+deps:
+  linux:
+    fedora:
+      - gcc-c++
+      - make
+      - cmake
+      - pkgconf-pkg-config
+      - wayland-devel
+      - libinput-devel
+      - systemd-devel
+      - autoconf
+      - automake
+      - libtool
+    ubuntu:
+      - build-essential
+      - cmake
+      - pkg-config
+      - libwayland-dev
+      - libinput-dev
+      - libudev-dev
+      - autoconf
+      - automake
+      - libtool

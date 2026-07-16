@@ -3,8 +3,10 @@
 #pragma once
 
 #include "weston_screenshooter/WestonScreenshooter_Client.h"
+#include "agl_health/AglHealth_Client.h"
 
-class TestRunnerPluginsClient : public PluginWestonScreenshooterClient {
+class TestRunnerPluginsClient : public PluginWestonScreenshooterClient,
+                                public PluginAglHealthClient {
  public:
   TestRunnerPluginsClient() = default;
   ~TestRunnerPluginsClient() = default;

@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
+# SPDX-License-Identifier: GPLv3
+# Plugin: AglHealth
+
+set(TEST_RUNNER_PLUGIN_INC
+        ${TEST_RUNNER_PLUGIN_INC}
+        ${CMAKE_SOURCE_DIR}/third_party
+        ${CURL_INCLUDE_DIRS}
+        PARENT_SCOPE
+)
+set(TEST_RUNNER_PLUGIN_SRCS
+        ${TEST_RUNNER_PLUGIN_SRCS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/AglHealth.cpp
+        PARENT_SCOPE
+)
+set(TEST_RUNNER_PLUGIN_CLIENT_SRCS
+        ${TEST_RUNNER_PLUGIN_CLIENT_SRCS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/AglHealth_Client.cpp
+        PARENT_SCOPE
+)
+set(TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS
+        ${TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/agl_health.capnp
+        PARENT_SCOPE
+)
+set(TEST_RUNNER_PLUGIN_LIBS
+        ${TEST_RUNNER_PLUGIN_LIBS}
+        ${CURL_LIBRARIES}
+        PARENT_SCOPE
+)

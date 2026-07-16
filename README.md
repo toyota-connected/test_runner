@@ -3,7 +3,7 @@
 [![CI](https://github.com/<org>/test_runner/actions/workflows/unit_tests.yml/badge.svg)](https://github.com/<org>/test_runner/actions/workflows/unit_tests.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-A Cap'n Proto RPC framework for injecting and recording input events on Linux systems via `uinput`. A plugin system lets developers extend the server with their own Cap'n Proto interfaces.
+Remote test framework for automated testing of [ivi-homescreen](https://github.com/toyota-connected/ivi-homescreen). Cap'n Proto server daemon runs alongside ivi-homescreen and listens for remote events.  Enables injecting and recording input events via `uinput`. A plugin system lets developers extend the server with their own Cap'n Proto interfaces.
 
 ## Features
 

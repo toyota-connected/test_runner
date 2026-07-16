@@ -29,6 +29,11 @@ if(NOT BUILD_CAPNP)
   find_package(CapnProto REQUIRED)
 endif()
 
+if(ENABLE_PLUGIN_AGL_HEALTH)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(CURL REQUIRED libcurl)
+endif()
+
 add_subdirectory(plugins)
 
 # Core Test Runner capnp schemas
@@ -74,6 +79,7 @@ target_link_libraries(TestRunnerClient
         CapnProto::kj
         CapnProto::kj-async
         spdlog::spdlog
+        ${TEST_RUNNER_PLUGIN_LIBS}
 )
 target_include_directories(TestRunnerClient
         PUBLIC
@@ -139,6 +145,7 @@ if(BUILD_SERVER)
           CapnProto::kj
           CapnProto::kj-async
           spdlog::spdlog
+          ${TEST_RUNNER_PLUGIN_LIBS}
   )
   install(TARGETS TestRunnerServer)
 endif()

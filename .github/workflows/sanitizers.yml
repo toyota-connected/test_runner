@@ -28,7 +28,7 @@ jobs:
             libwayland-dev libinput-dev libudev-dev \
             libgtest-dev libgmock-dev \
             libasan5 \
-            autoconf automake libtool
+            autoconf automake libtool libcurl4-openssl-dev
 
       - name: Configure
         run: |
@@ -85,7 +85,7 @@ jobs:
             libwayland-dev libinput-dev libudev-dev \
             libgtest-dev libgmock-dev \
             libubsan1 \
-            autoconf automake libtool
+            autoconf automake libtool libcurl4-openssl-dev
 
       - name: Configure
         run: |

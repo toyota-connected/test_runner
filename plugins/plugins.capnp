@@ -3,6 +3,7 @@
 @0x92289ba1D7af2b1a;
 
 using import "../plugins/weston_screenshooter/weston_screenshooter.capnp".Screenshooter;
+using import "../plugins/agl_health/agl_health.capnp".AglHealth;
 
-interface Plugins extends (Screenshooter) {
+interface Plugins extends (Screenshooter, AglHealth) {
 }

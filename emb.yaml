@@ -59,8 +59,15 @@ cross:
     # derive these: emb extracts the -dev packages root-free, so the sonames
     # aren't in the sysroot's dpkg db.) Confirm the exact name on trixie with
     # `apt-cache policy` if apt can't find it.
+    # libwayland-client0 is in the sysroot's dpkg db, so auto-depends should
+    # have found it — but the DT_NEEDED comes from libTestRunnerServer.so (a
+    # bundle_libs: object), not from the bin: target, and emb appears to scan
+    # only the latter. Latent on raspios (the base image ships it), fatal on a
+    # slimmer rootfs: dpkg reports success, then the server dies at exec with
+    # "error while loading shared libraries: libwayland-client.so.0".
     depends:
       - libcapnp-1.1.0
+      - libwayland-client0
 
   # Cross targets, one per board. Build with `emb cross emb.yaml --target <name>
   # --build`; `--target local` (the default) still does the native host build

@@ -93,9 +93,6 @@ install(TARGETS TestRunnerClient)
 
 
 if(BUILD_SERVER)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
-
   # ── TestRunnerRecorder ───────────────────────────────────────────────────────────────
   add_library(TestRunnerRecorder SHARED
           recorder/TestRunnerRecorder.cpp
@@ -132,13 +129,12 @@ if(BUILD_SERVER)
           ${TEST_RUNNER_PLUGIN_INC}
           ${CMAKE_BINARY_DIR}
           PRIVATE
-          ${WAYLAND_CLIENT_INCLUDE_DIRS}
+          ${TEST_RUNNER_PLUGIN_SERVER_INC}
   )
   target_link_libraries(TestRunnerServer
           PRIVATE
           TestRunnerRecorder
           udev
-          ${WAYLAND_CLIENT_LIBRARIES}
           rt
           CapnProto::capnp
           CapnProto::capnp-rpc
@@ -146,6 +142,7 @@ if(BUILD_SERVER)
           CapnProto::kj-async
           spdlog::spdlog
           ${TEST_RUNNER_PLUGIN_LIBS}
+          ${TEST_RUNNER_PLUGIN_SERVER_LIBS}
   )
   install(TARGETS TestRunnerServer)
 endif()

@@ -53,6 +53,12 @@ TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls, bool enable_plugi
 }
 
 TestRunnerServer::~TestRunnerServer() {
+  // Stop recorders first: their threads call m_syscalls (virtual dispatch)
+  // which requires m_owned_syscalls to still be alive, and they must not be
+  // running when close_input_device() destroys the uinput devices they read.
+  snapshot_recorder.reset();
+  custom_recorders.clear();
+
   for (const int i : mDeviceFd) {
     close_input_device(i);
   }

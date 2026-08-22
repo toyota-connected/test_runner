@@ -68,10 +68,13 @@ int main(int argc, char** argv) {
   auto& waitScope = server->getWaitScope();
 
   // Block until a signal byte arrives on the pipe, then fall through to
-  // cleanup.
-  auto signalIn = server->getLowLevelIoProvider().wrapInputFd(signal_pipe[0]);
-  char buf[1];
-  signalIn->read(buf, 1, 1).wait(waitScope);
+  // cleanup. signalIn must be destroyed before server since it holds a
+  // registration in server's event loop.
+  {
+    auto signalIn = server->getLowLevelIoProvider().wrapInputFd(signal_pipe[0]);
+    char buf[1];
+    signalIn->read(buf, 1, 1).wait(waitScope);
+  }
 
   SPDLOG_INFO("Shutting down...");
   server.reset();  // ~TestRunnerServer() destroys uinput devices

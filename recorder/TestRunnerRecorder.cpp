@@ -101,7 +101,7 @@ void TestRunnerRecorder::findDevices() {
 
             result = m_syscalls->ioctl(fd, EVIOCGNAME(50), &name);
             if (result < 0) {
-              spdlog::error("Couldn't retrieve device name");
+              spdlog::warning("Couldn't retrieve device name");
             }
             strncpy(indev.name, name, 50);
             indev.name[sizeof(indev.name) - 1] = '\0';
@@ -112,14 +112,14 @@ void TestRunnerRecorder::findDevices() {
             result =
                 m_syscalls->ioctl(fd, EVIOCGBIT(0, 150), device_capabilities);
             if (result < 0) {
-              spdlog::error("Couldn't retrieve device capabilities");
+              spdlog::warning("Couldn't retrieve device capabilities");
             }
 
             result = m_syscalls->ioctl(
                 fd, EVIOCGBIT(EV_ABS, sizeof(abs_capabilities)),
                 abs_capabilities);
             if (result < 0) {
-              spdlog::error("Couldn't retrieve device abs capabilities");
+              spdlog::warning("Couldn't retrieve device abs capabilities");
             }
 
             if ((device_capabilities[EV_ABS / 8] & (1 << (EV_ABS % 8))) != 0) {
@@ -141,12 +141,12 @@ void TestRunnerRecorder::findDevices() {
                 result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_MT_POSITION_X),
                                            &indev.abs_range_x);
                 if (result < 0) {
-                  spdlog::error("Couldn't retrieve device abs range x");
+                  spdlog::warning("Couldn't retrieve device abs range x");
                 }
                 result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_MT_POSITION_Y),
                                            &indev.abs_range_y);
                 if (result < 0) {
-                  spdlog::error("Couldn't retrieve device abs range y");
+                  spdlog::warning("Couldn't retrieve device abs range y");
                 }
               } else if (has_abs_x && has_abs_y) {
                 indev.type = TOUCHSCREEN;
@@ -155,13 +155,13 @@ void TestRunnerRecorder::findDevices() {
                 result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_X),
                                            &indev.abs_range_x);
                 if (result < 0) {
-                  spdlog::error("Couldn't retrieve device abs range x");
+                  spdlog::warning("Couldn't retrieve device abs range x");
                 }
 
                 result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_Y),
                                            &indev.abs_range_y);
                 if (result < 0) {
-                  spdlog::error("Couldn't retrieve device abs range y");
+                  spdlog::warning("Couldn't retrieve device abs range y");
                 }
               } else {
                 spdlog::info("Skipping device at {}: '{}'.", dev_path, name);

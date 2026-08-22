@@ -394,7 +394,7 @@ void TestRunnerRecorder::Record() {
             // Resolve keysym for keyboard key events before updating XKB state.
             uint32_t keysym = 0;
             if (ev.type == EV_KEY && in_device.type == KEYBOARD && m_xkb_state) {
-              xkb_keycode_t xkb_code = static_cast<xkb_keycode_t>(ev.code + 8);
+              auto xkb_code = static_cast<xkb_keycode_t>(ev.code + 8);
               keysym = xkb_state_key_get_one_sym(m_xkb_state, xkb_code);
               if (ev.value == 1) {
                 xkb_state_update_key(m_xkb_state, xkb_code, XKB_KEY_DOWN);

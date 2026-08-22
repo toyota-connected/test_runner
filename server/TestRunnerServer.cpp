@@ -145,7 +145,7 @@ uint32_t TestRunnerServer::resolve_keysym(xkb_keysym_t target_sym) const {
   // Search unshifted level first, then shifted, to prefer the simpler mapping.
   for (uint32_t level = 0; level <= 1; level++) {
     for (uint32_t evdev = KEY_ESC; evdev < KEY_MAX; evdev++) {
-      xkb_keycode_t xkb_code = static_cast<xkb_keycode_t>(evdev + 8);
+      auto xkb_code = static_cast<xkb_keycode_t>(evdev + 8);
       uint32_t num_layouts = xkb_keymap_num_layouts_for_key(m_xkb_keymap, xkb_code);
       for (uint32_t layout_idx = 0; layout_idx < num_layouts; layout_idx++) {
         const xkb_keysym_t* syms = nullptr;

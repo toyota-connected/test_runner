@@ -25,7 +25,7 @@ jobs:
             build-essential cmake \
             clang clang-tidy \
             libwayland-dev libinput-dev libudev-dev \
-            autoconf automake libtool libcurl4-openssl-dev
+            autoconf automake libtool libcurl4-openssl-dev libxkbcommon
 
       - name: Configure
         run: |

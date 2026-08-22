@@ -93,6 +93,9 @@ install(TARGETS TestRunnerClient)
 
 
 if(BUILD_SERVER)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+
   # ── TestRunnerRecorder ───────────────────────────────────────────────────────────────
   add_library(TestRunnerRecorder SHARED
           recorder/TestRunnerRecorder.cpp
@@ -101,16 +104,19 @@ if(BUILD_SERVER)
           PRIVATE
           udev
           spdlog::spdlog
+          ${XKBCOMMON_LIBRARIES}
+  )
+  target_include_directories(TestRunnerRecorder
+          PUBLIC
+          recorder
+          ${CMAKE_BINARY_DIR}
+          PRIVATE
+          ${XKBCOMMON_INCLUDE_DIRS}
   )
   if(ENABLE_LIBINPUT)
     target_link_libraries(TestRunnerRecorder PRIVATE input)
     add_compile_definitions(ENABLE_LIBINPUT)
   endif()
-  target_include_directories(TestRunnerRecorder
-          PUBLIC
-          recorder
-          ${CMAKE_BINARY_DIR}
-  )
   install(TARGETS TestRunnerRecorder)
 
   # ── TestRunnerServer ─────────────────────────────────────────────────────────────────
@@ -130,6 +136,7 @@ if(BUILD_SERVER)
           ${CMAKE_BINARY_DIR}
           PRIVATE
           ${TEST_RUNNER_PLUGIN_SERVER_INC}
+          ${XKBCOMMON_INCLUDE_DIRS}
   )
   target_link_libraries(TestRunnerServer
           PRIVATE
@@ -141,6 +148,7 @@ if(BUILD_SERVER)
           CapnProto::kj
           CapnProto::kj-async
           spdlog::spdlog
+          ${XKBCOMMON_LIBRARIES}
           ${TEST_RUNNER_PLUGIN_LIBS}
           ${TEST_RUNNER_PLUGIN_SERVER_LIBS}
   )

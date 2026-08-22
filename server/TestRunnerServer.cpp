@@ -11,6 +11,8 @@
 #include <linux/uinput.h>
 #include <sys/ioctl.h>
 
+#include <xkbcommon/xkbcommon.h>
+
 #include "SyscallInterface.h"
 
 #include <capnp/ez-rpc.h>
@@ -26,7 +28,7 @@ static ErrorHandlerImpl errorHandler;
 static kj::TaskSet taskSet_(errorHandler);
 
 TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls, bool enable_plugins,
-                     bool enable_snapshot_recorder)
+                     bool enable_snapshot_recorder, const XkbConfig& xkb_cfg)
     : mDeviceFd{-1, -1, -1, -1} {
   if (syscalls != nullptr) {
     m_syscalls = syscalls;
@@ -40,6 +42,7 @@ TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls, bool enable_plugi
   setup_virtual_keyboard();
   setup_virtual_touchscreen();
   setup_virtual_multi_touchscreen();
+  setup_xkb(xkb_cfg);
 
   if (enable_plugins) {
     init_plugins();
@@ -62,6 +65,9 @@ TestRunnerServer::~TestRunnerServer() {
   for (const int i : mDeviceFd) {
     close_input_device(i);
   }
+
+  if (m_xkb_keymap) xkb_keymap_unref(m_xkb_keymap);
+  if (m_xkb_ctx) xkb_context_unref(m_xkb_ctx);
 }
 
 void TestRunnerServer::setup_virtual_keyboard() {
@@ -100,6 +106,57 @@ void TestRunnerServer::setup_virtual_keyboard() {
   } else {
     spdlog::error("Failed to open /dev/uinput");
   }
+}
+
+void TestRunnerServer::setup_xkb(const XkbConfig& cfg) {
+  m_xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  if (!m_xkb_ctx) {
+    spdlog::error("Failed to create XKB context");
+    return;
+  }
+
+  auto env_or = [](const std::string& val, const char* env) -> const char* {
+    if (!val.empty()) return val.c_str();
+    return getenv(env);
+  };
+
+  xkb_rule_names rules{};
+  rules.rules   = env_or(cfg.rules,   "XKB_DEFAULT_RULES");
+  rules.model   = env_or(cfg.model,   "XKB_DEFAULT_MODEL");
+  rules.layout  = env_or(cfg.layout,  "XKB_DEFAULT_LAYOUT");
+  rules.variant = env_or(cfg.variant, "XKB_DEFAULT_VARIANT");
+  rules.options = env_or(cfg.options, "XKB_DEFAULT_OPTIONS");
+
+  m_xkb_keymap = xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  if (!m_xkb_keymap) {
+    spdlog::error("XKB keymap compilation failed — keySym/keyName injection disabled");
+    xkb_context_unref(m_xkb_ctx);
+    m_xkb_ctx = nullptr;
+    return;
+  }
+  spdlog::info("XKB keymap loaded: layout='{}' variant='{}' model='{}'",
+               rules.layout ? rules.layout : "",
+               rules.variant ? rules.variant : "",
+               rules.model ? rules.model : "");
+}
+
+uint32_t TestRunnerServer::resolve_keysym(xkb_keysym_t target_sym) const {
+  if (!m_xkb_keymap) return 0;
+  // Search unshifted level first, then shifted, to prefer the simpler mapping.
+  for (uint32_t level = 0; level <= 1; level++) {
+    for (uint32_t evdev = KEY_ESC; evdev < KEY_MAX; evdev++) {
+      xkb_keycode_t xkb_code = static_cast<xkb_keycode_t>(evdev + 8);
+      uint32_t num_layouts = xkb_keymap_num_layouts_for_key(m_xkb_keymap, xkb_code);
+      for (uint32_t layout_idx = 0; layout_idx < num_layouts; layout_idx++) {
+        const xkb_keysym_t* syms = nullptr;
+        int n = xkb_keymap_key_get_syms_by_level(m_xkb_keymap, xkb_code, layout_idx, level, &syms);
+        for (int i = 0; i < n; i++) {
+          if (syms[i] == target_sym) return evdev;
+        }
+      }
+    }
+  }
+  return 0;
 }
 
 void TestRunnerServer::setup_virtual_touchscreen() {
@@ -317,9 +374,41 @@ kj::Promise<void> TestRunnerServer::handleMouseClick(HandleMouseClickContext con
 
 kj::Promise<void> TestRunnerServer::handleKeyPress(HandleKeyPressContext context) {
   const auto keyPress = context.getParams().getKeyPress();
-  spdlog::debug("KeyPress received: key={}, pressed={}", keyPress.getKey(),
-                keyPress.getPressed());
-  emit(getDeviceFd(VIRTUAL_KEYBOARD), EV_KEY, keyPress.getKey(),
+  uint32_t evdev_code = 0;
+
+  switch (keyPress.which()) {
+    case KeyPress::RAW_CODE:
+      evdev_code = keyPress.getRawCode();
+      break;
+    case KeyPress::KEY_SYM: {
+      evdev_code = resolve_keysym(static_cast<xkb_keysym_t>(keyPress.getKeySym()));
+      if (!evdev_code) {
+        spdlog::warn("No keycode found for keysym 0x{:x}", keyPress.getKeySym());
+        context.getResults();
+        return kj::READY_NOW;
+      }
+      break;
+    }
+    case KeyPress::KEY_NAME: {
+      const char* name = keyPress.getKeyName().cStr();
+      xkb_keysym_t sym = xkb_keysym_from_name(name, XKB_KEYSYM_NO_FLAGS);
+      if (sym == XKB_KEY_NoSymbol) {
+        spdlog::warn("Unknown key name: '{}'", name);
+        context.getResults();
+        return kj::READY_NOW;
+      }
+      evdev_code = resolve_keysym(sym);
+      if (!evdev_code) {
+        spdlog::warn("No keycode found for key name '{}'", name);
+        context.getResults();
+        return kj::READY_NOW;
+      }
+      break;
+    }
+  }
+
+  spdlog::debug("KeyPress received: code={}, pressed={}", evdev_code, keyPress.getPressed());
+  emit(getDeviceFd(VIRTUAL_KEYBOARD), EV_KEY, static_cast<int>(evdev_code),
        keyPress.getPressed());
   emit(getDeviceFd(VIRTUAL_KEYBOARD), EV_SYN, SYN_REPORT, 0);
   context.getResults();

@@ -189,7 +189,7 @@ TEST(TestRunnerServerHandlers, HandleMouseClick) {
   // Instead re-capture properly:
 }
 
-TEST(TestRunnerServerHandlers, HandleKeyPress) {
+TEST(TestRunnerServerHandlers, HandleKeyPressRawCode) {
   MockSyscall mock;
   kj::EventLoop loop;
   kj::WaitScope ws(loop);
@@ -208,7 +208,7 @@ TEST(TestRunnerServerHandlers, HandleKeyPress) {
           Return(sizeof(input_event))));
 
   auto req = client.handleKeyPressRequest();
-  req.getKeyPress().setKey(KEY_A);
+  req.getKeyPress().setRawCode(KEY_A);
   req.getKeyPress().setPressed(true);
   req.send().wait(ws);
 
@@ -217,6 +217,41 @@ TEST(TestRunnerServerHandlers, HandleKeyPress) {
   EXPECT_EQ(writes[0].code, KEY_A);
   EXPECT_EQ(writes[0].value, 1);
   EXPECT_EQ(writes[1].type, EV_SYN);
+}
+
+// Without a loaded XKB keymap (no system keymap in test environment or
+// keymap compilation fails) the keySym/keyName paths log a warning and
+// return without writing any input events.
+TEST(TestRunnerServerHandlers, HandleKeyPressKeySymNoKeymapIsNoOp) {
+  MockSyscall mock;
+  kj::EventLoop loop;
+  kj::WaitScope ws(loop);
+
+  TestRunnerService::Client client = make_local_server(mock);
+
+  // write() must NOT be called if the keysym cannot be resolved.
+  EXPECT_CALL(mock, write(11, _, sizeof(input_event))).Times(::testing::AtMost(2));
+
+  auto req = client.handleKeyPressRequest();
+  req.getKeyPress().setKeySym(0x61 /* XKB_KEY_a */);
+  req.getKeyPress().setPressed(true);
+  req.send().wait(ws);
+  // No assertion on writes — the important thing is no crash and no UB.
+}
+
+TEST(TestRunnerServerHandlers, HandleKeyPressKeyNameNoKeymapIsNoOp) {
+  MockSyscall mock;
+  kj::EventLoop loop;
+  kj::WaitScope ws(loop);
+
+  TestRunnerService::Client client = make_local_server(mock);
+
+  EXPECT_CALL(mock, write(11, _, sizeof(input_event))).Times(::testing::AtMost(2));
+
+  auto req = client.handleKeyPressRequest();
+  req.getKeyPress().setKeyName("Return");
+  req.getKeyPress().setPressed(true);
+  req.send().wait(ws);
 }
 
 TEST(TestRunnerServerHandlers, HandleSingleTouchXAndY) {

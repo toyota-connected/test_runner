@@ -7,7 +7,18 @@
 #include <capnp/serialize.h>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include <xkbcommon/xkbcommon.h>
+
+struct XkbConfig {
+  std::string rules;
+  std::string model;
+  std::string layout;
+  std::string variant;
+  std::string options;
+};
 
 #include "SyscallInterface.h"
 
@@ -41,7 +52,8 @@ class TestRunnerServer final : virtual public TestRunnerService::Server, public 
  public:
   explicit TestRunnerServer(SyscallInterface* syscalls = nullptr,
                      bool enable_plugins = true,
-                     bool enable_snapshot_recorder = true);
+                     bool enable_snapshot_recorder = true,
+                     const XkbConfig& xkb_cfg = {});
   ~TestRunnerServer();
 
   void emit(int fd, int type, int code, int val);
@@ -83,10 +95,15 @@ class TestRunnerServer final : virtual public TestRunnerService::Server, public 
   std::unique_ptr<RealSyscalls> m_owned_syscalls;
   SyscallInterface* m_syscalls;
 
+  xkb_context* m_xkb_ctx = nullptr;
+  xkb_keymap* m_xkb_keymap = nullptr;
+
   void setup_virtual_mouse();
   void setup_virtual_keyboard();
   void setup_virtual_touchscreen();
   void setup_virtual_multi_touchscreen();
+  void setup_xkb(const XkbConfig& cfg);
+  uint32_t resolve_keysym(xkb_keysym_t sym) const;
   void uinput_capability_setup(int fd, int type, int val);
   void close_input_device(int fd);
 };

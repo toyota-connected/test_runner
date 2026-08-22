@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <iomanip>
 
+#include <xkbcommon/xkbcommon.h>
+
 #include "SyscallInterface.h"
 #include "spdlog/spdlog.h"
 
@@ -44,6 +46,7 @@ TestRunnerRecorder::TestRunnerRecorder(char* filename,
     m_syscalls = m_owned_syscalls.get();
   }
   findDevices();
+  setup_xkb();
   if (!continuous) {
     std::string filename_str = filename;
     m_filename = "/tmp/" + std::filesystem::path(filename_str).filename().string() + ".rrc";
@@ -55,6 +58,10 @@ TestRunnerRecorder::TestRunnerRecorder(char* filename,
 }
 
 TestRunnerRecorder::~TestRunnerRecorder() {
+  if (m_xkb_state)   xkb_state_unref(m_xkb_state);
+  if (m_xkb_keymap)  xkb_keymap_unref(m_xkb_keymap);
+  if (m_xkb_ctx)     xkb_context_unref(m_xkb_ctx);
+
 #if ENABLE_LIBINPUT
   // Restore Accel Profiles
   spdlog::info("Restoring Mouse Acceleration profiles");
@@ -76,6 +83,31 @@ TestRunnerRecorder::~TestRunnerRecorder() {
   // Close the file descriptors
   for (in_device_s in_device : available_devices) {
     m_syscalls->close(in_device.fd);
+  }
+}
+
+void TestRunnerRecorder::setup_xkb() {
+  m_xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  if (!m_xkb_ctx) {
+    spdlog::warn("Failed to create XKB context — keysyms will not be recorded");
+    return;
+  }
+  // Use env vars (XKB_DEFAULT_LAYOUT etc.) or system default if unset.
+  xkb_rule_names rules{};
+  m_xkb_keymap = xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  if (!m_xkb_keymap) {
+    spdlog::warn("XKB keymap compilation failed — keysyms will not be recorded");
+    xkb_context_unref(m_xkb_ctx);
+    m_xkb_ctx = nullptr;
+    return;
+  }
+  m_xkb_state = xkb_state_new(m_xkb_keymap);
+  if (!m_xkb_state) {
+    spdlog::warn("Failed to create XKB state — keysyms will not be recorded");
+    xkb_keymap_unref(m_xkb_keymap);
+    xkb_context_unref(m_xkb_ctx);
+    m_xkb_keymap = nullptr;
+    m_xkb_ctx = nullptr;
   }
 }
 
@@ -303,6 +335,7 @@ void TestRunnerRecorder::Record() {
   if (!m_continuous) {
     cmd_file.open(m_filename);
     std::string start_time_str = current_time_str(m_start_time);
+    cmd_file << "version " << RECORDING_FORMAT_VERSION << "\n";
     cmd_file << "[" << start_time_str << "]"
              << "\n";
   }
@@ -358,20 +391,36 @@ void TestRunnerRecorder::Record() {
               continue;
             }
 
+            // Resolve keysym for keyboard key events before updating XKB state.
+            uint32_t keysym = 0;
+            if (ev.type == EV_KEY && in_device.type == KEYBOARD && m_xkb_state) {
+              xkb_keycode_t xkb_code = static_cast<xkb_keycode_t>(ev.code + 8);
+              keysym = xkb_state_key_get_one_sym(m_xkb_state, xkb_code);
+              if (ev.value == 1) {
+                xkb_state_update_key(m_xkb_state, xkb_code, XKB_KEY_DOWN);
+              } else if (ev.value == 0) {
+                xkb_state_update_key(m_xkb_state, xkb_code, XKB_KEY_UP);
+              }
+            }
+
             /* If this is not a continuous recording, just immediately write
              * each input to the file. */
             if (!m_continuous) {
               std::string time_str = current_time_str(ts_abs);
               cmd_file << "[" << time_str << "] "
                        << "passThrough " << in_device.type << " " << ev.type
-                       << " " << ev.code << " " << ev.value << "\n";
+                       << " " << ev.code << " " << ev.value;
+              if (keysym) {
+                cmd_file << " " << keysym;
+              }
+              cmd_file << "\n";
             }
             /* If it is continous, keep the input in local memory until we
                decide to dump it to a file all at once. */
             else {
               std::lock_guard<std::mutex> lock(buf_mtx);
               m_input_buf.push_back(
-                  {ts_abs, in_device.type, ev.type, ev.code, ev.value});
+                  {ts_abs, in_device.type, ev.type, ev.code, ev.value, keysym});
             }
           } else if (bytes_read == -1 && errno != EAGAIN &&
                      errno != EWOULDBLOCK) {
@@ -447,13 +496,18 @@ void TestRunnerRecorder::processBuffer() {
   } else {
     start_time_str = current_time_str(m_start_time);
   }
+  cmd_file << "version " << RECORDING_FORMAT_VERSION << "\n";
   cmd_file << "[" << start_time_str << "]"
            << "\n";
-  for (input_record_s record : m_input_buf) {
+  for (const input_record_s& record : m_input_buf) {
     std::string time_str = current_time_str(record.ts_abs);
     cmd_file << "[" << time_str << "] "
              << "passThrough " << record.dev_type << " " << record.input_type
-             << " " << record.input_code << " " << record.input_val << "\n";
+             << " " << record.input_code << " " << record.input_val;
+    if (record.keysym) {
+      cmd_file << " " << record.keysym;
+    }
+    cmd_file << "\n";
   }
 }
 

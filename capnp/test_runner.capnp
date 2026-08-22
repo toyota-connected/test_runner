@@ -14,8 +14,12 @@ struct MouseClick {
 }
 
 struct KeyPress {
-  key @0 :UInt16;
-  pressed @1 :Bool;
+  pressed @0 :Bool;
+  union {
+    rawCode @1 :UInt16;  # raw Linux KEY_* evdev code
+    keySym  @2 :UInt32;  # XKB keysym (e.g. XKB_KEY_a = 0x61)
+    keyName @3 :Text;    # XKB keysym name (e.g. "Return", "space", "a")
+  }
 }
 
 struct SingleTouch {

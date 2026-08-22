@@ -45,10 +45,32 @@ void TestRunnerClient::SendKeyPress(int key, bool pressed) {
   auto input = getMain<Input>();
   auto request = input.handleKeyPressRequest();
   auto keyPress = request.initKeyPress();
-  keyPress.setKey(key);
+  keyPress.setRawCode(static_cast<uint16_t>(key));
   keyPress.setPressed(pressed);
   waitWithTimeout(request.send());
-  spdlog::debug("keyPress sent: key={} pressed={}", key, pressed);
+  spdlog::debug("keyPress sent: rawCode={} pressed={}", key, pressed);
+}
+
+void TestRunnerClient::SendKeyPressByKeySym(uint32_t keySym, bool pressed) {
+  KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
+  auto input = getMain<Input>();
+  auto request = input.handleKeyPressRequest();
+  auto keyPress = request.initKeyPress();
+  keyPress.setKeySym(keySym);
+  keyPress.setPressed(pressed);
+  waitWithTimeout(request.send());
+  spdlog::debug("keyPress sent: keySym=0x{:x} pressed={}", keySym, pressed);
+}
+
+void TestRunnerClient::SendKeyPressByName(const std::string& name, bool pressed) {
+  KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
+  auto input = getMain<Input>();
+  auto request = input.handleKeyPressRequest();
+  auto keyPress = request.initKeyPress();
+  keyPress.setKeyName(name);
+  keyPress.setPressed(pressed);
+  waitWithTimeout(request.send());
+  spdlog::debug("keyPress sent: keyName='{}' pressed={}", name, pressed);
 }
 
 void TestRunnerClient::SendSingleTouch(int x, int y, bool pressed) {

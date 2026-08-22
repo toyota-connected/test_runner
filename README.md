@@ -55,12 +55,20 @@ cmake .. -DBUILD_CAPNP=OFF
 
 Minimum required system capnproto version: **0.9.x**.
 
+## Permissions
+
+Recording inputs requires the user to be part of group 'input'.  
+
+Creating virtual devices requires the user to be part of group 'uinput'.
+
+If active user is not part of both groups, it is recommended that the server is run with 'sudo'.
+
 ## Running
 
-Terminal 1 (requires root for `/dev/uinput`):
+Terminal 1 (add sudo if necessary):
 
 ```bash
-sudo test-runner-server
+TestRunner-Server
 ```
 
 Terminal 2:

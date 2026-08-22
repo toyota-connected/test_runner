@@ -128,6 +128,8 @@ if(BUILD_SERVER)
           plugins
           ${TEST_RUNNER_PLUGIN_INC}
           ${CMAKE_BINARY_DIR}
+          PRIVATE
+          ${TEST_RUNNER_PLUGIN_SERVER_INC}
   )
   target_link_libraries(TestRunnerServer
           PRIVATE
@@ -140,6 +142,7 @@ if(BUILD_SERVER)
           CapnProto::kj-async
           spdlog::spdlog
           ${TEST_RUNNER_PLUGIN_LIBS}
+          ${TEST_RUNNER_PLUGIN_SERVER_LIBS}
   )
   install(TARGETS TestRunnerServer)
 endif()

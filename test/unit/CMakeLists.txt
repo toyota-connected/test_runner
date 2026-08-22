@@ -36,6 +36,7 @@ target_link_libraries(test_runner_unit_tests
         gtest_main
         gtest
         pthread
+        ${XKBCOMMON_LIBRARIES}
 )
 
 add_test(NAME test_runner_unit_tests COMMAND test_runner_unit_tests)

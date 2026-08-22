@@ -289,8 +289,12 @@ TEST(IntegrationRecorder, CreateStartStopProducesFile) {
   ASSERT_TRUE(f.good()) << "recording file not found at: " << path;
   std::string first_line;
   ASSERT_TRUE(std::getline(f, first_line));
-  // File starts with a timestamp header: [HH:MM:SS.mmm]
-  EXPECT_TRUE(std::regex_search(first_line,
+  // First line is the version header.
+  EXPECT_EQ(first_line, "version 2");
+  // Second line is the timestamp header: [HH:MM:SS.mmm]
+  std::string second_line;
+  ASSERT_TRUE(std::getline(f, second_line));
+  EXPECT_TRUE(std::regex_search(second_line,
       std::regex(R"(\[\d{2}:\d{2}:\d{2}\.\d{3}\])")));
 }
 

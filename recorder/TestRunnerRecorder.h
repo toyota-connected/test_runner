@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <atomic>
 
+#include <xkbcommon/xkbcommon.h>
+
 #define FILE_MAX_LINES (500000)
 
 enum device_type {
@@ -49,12 +51,15 @@ struct device_bu_s {
 };
 #endif
 
+static constexpr uint32_t RECORDING_FORMAT_VERSION = 2;
+
 struct input_record_s {
   std::chrono::milliseconds ts_abs;
   device_type dev_type;
   int input_type;
   int input_code;
   int input_val;
+  uint32_t keysym;  // XKB keysym for EV_KEY events on keyboard devices; 0 otherwise
 };
 
 // Forward declaration — defined in test/mocks/SyscallInterface.h (tests) or
@@ -86,6 +91,10 @@ class TestRunnerRecorder {
   std::string input_dir;
   std::unique_ptr<RealSyscalls> m_owned_syscalls;
   SyscallInterface* m_syscalls;
+
+  xkb_context* m_xkb_ctx = nullptr;
+  xkb_keymap* m_xkb_keymap = nullptr;
+  xkb_state* m_xkb_state = nullptr;
   std::string m_filename;
   std::string m_recording_path;
   std::mutex stop_mtx;
@@ -111,6 +120,7 @@ class TestRunnerRecorder {
   void Record();
   void findDevices();
   void processBuffer();
+  void setup_xkb();
   static void transform_touch_coordinates(in_device_s device,
                                           int& val,
                                           int axis);

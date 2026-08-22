@@ -61,6 +61,8 @@ class TestRunnerClient : virtual public RPCClient, public TestRunnerPluginsClien
   void SendMouseMove(int x, int y);
   void SendMouseClick(int btn, bool pressed);
   void SendKeyPress(int key, bool pressed);
+  void SendKeyPressByKeySym(uint32_t keySym, bool pressed);
+  void SendKeyPressByName(const std::string& name, bool pressed);
   void SendSingleTouch(int x, int y, bool pressed);
   void SendMultiTouch(multiTouch touches[], int count);
   void SendPassThrough(int device, int type, int code, int val);

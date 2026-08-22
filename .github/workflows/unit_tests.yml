@@ -27,7 +27,7 @@ jobs:
             libwayland-dev libinput-dev libudev-dev \
             libgtest-dev libgmock-dev \
             lcov \
-            autoconf automake libtool libcurl4-openssl-dev libxkbcommon
+            autoconf automake libtool libcurl4-openssl-dev libxkbcommon-dev
 
       - name: Configure
         run: |

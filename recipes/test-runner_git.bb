@@ -3,8 +3,8 @@ DESCRIPTION = "Tools to record, send, receive and execute emulated inputs from r
 AUTHOR = "matt.everett@toyotaconnected.com"
 HOMEPAGE = "https://github.com/toyota-connected/test_runner"
 BUGTRACKER = "https://github.com/toyota-connected/test_runner/issues"
-LICENSE = "GPLv3"
-LIC_FILES_CHKSUM = "1ebbd3e34237af26da5dc08a4e440464"
+LICENSE = "GPL-3.0-only"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=1ebbd3e34237af26da5dc08a4e440464"
 
 DEPENDS += "\
     libinput \

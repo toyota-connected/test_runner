@@ -34,6 +34,14 @@ if(ENABLE_PLUGIN_AGL_HEALTH)
   pkg_check_modules(CURL REQUIRED libcurl)
 endif()
 
+# Recording: the recorder/ library, the TestRunner-Recorder tool, and the
+# server's Recorder RPC methods. OFF drops all three. The methods stay in the
+# schema and fall back to capnp's "unimplemented" bodies, so clients still work.
+option(BUILD_RECORDER "Build input event recording support" ON)
+if(BUILD_RECORDER)
+  add_compile_definitions(ENABLE_RECORDER)
+endif()
+
 add_subdirectory(plugins)
 
 # Core Test Runner capnp schemas
@@ -96,6 +104,7 @@ if(BUILD_SERVER)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 
+  if(BUILD_RECORDER)
   # ── TestRunnerRecorder ───────────────────────────────────────────────────────────────
   add_library(TestRunnerRecorder SHARED
           recorder/TestRunnerRecorder.cpp
@@ -118,6 +127,7 @@ if(BUILD_SERVER)
     add_compile_definitions(ENABLE_LIBINPUT)
   endif()
   install(TARGETS TestRunnerRecorder)
+  endif()
 
   # ── TestRunnerServer ─────────────────────────────────────────────────────────────────
   add_library(TestRunnerServer SHARED
@@ -131,6 +141,9 @@ if(BUILD_SERVER)
   target_include_directories(TestRunnerServer
           PUBLIC
           server
+          # SyscallInterface.h is under recorder/, but the server needs it
+          # with or without BUILD_RECORDER.
+          recorder
           plugins
           ${TEST_RUNNER_PLUGIN_INC}
           ${CMAKE_BINARY_DIR}
@@ -140,7 +153,6 @@ if(BUILD_SERVER)
   )
   target_link_libraries(TestRunnerServer
           PRIVATE
-          TestRunnerRecorder
           udev
           rt
           CapnProto::capnp
@@ -152,6 +164,9 @@ if(BUILD_SERVER)
           ${TEST_RUNNER_PLUGIN_LIBS}
           ${TEST_RUNNER_PLUGIN_SERVER_LIBS}
   )
+  if(BUILD_RECORDER)
+    target_link_libraries(TestRunnerServer PRIVATE TestRunnerRecorder)
+  endif()
   install(TARGETS TestRunnerServer)
 endif()
 
@@ -171,7 +186,6 @@ if(BUILD_EXAMPLES)
   target_link_libraries(TestRunner-Server
           PRIVATE
           TestRunnerServer
-          TestRunnerRecorder
           udev
           CapnProto::capnp
           CapnProto::capnp-rpc
@@ -179,6 +193,9 @@ if(BUILD_EXAMPLES)
           CapnProto::kj-async
           spdlog::spdlog
   )
+  if(BUILD_RECORDER)
+    target_link_libraries(TestRunner-Server PRIVATE TestRunnerRecorder)
+  endif()
 
   # ── TestRunnerClientTest executable ──────────────────────────────────────────────────
   add_executable(TestRunnerClientTest
@@ -198,6 +215,7 @@ if(BUILD_EXAMPLES)
           TestRunnerClient
   )
 
+  if(BUILD_RECORDER)
   # ── TestRunner-Recorder executable ───────────────────────────────────────────────────
   add_executable(TestRunner-Recorder
           recorder/recorder.cpp
@@ -214,6 +232,7 @@ if(BUILD_EXAMPLES)
   target_include_directories(TestRunner-Recorder PRIVATE
           ${CMAKE_BINARY_DIR}
   )
+  endif()
 endif()
 
 if(BUILD_TESTS)

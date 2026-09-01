@@ -253,6 +253,9 @@ TEST(Integration, MultiCommandSequence) {
 
 // ── Recorder RPC lifecycle tests ───────────────────────────────────────────────
 //
+// Needs BUILD_RECORDER; without it the server answers these "unimplemented".
+#if ENABLE_RECORDER
+//
 // These tests exercise the full createCustomRecorder → start → stop → file
 // lifecycle via TestRunnerClient RPC calls to a live EzRpcServer-wrapped TestRunnerServer.
 //
@@ -431,3 +434,5 @@ TEST(IntegrationRecorder, SetDevicesToRecordAndVerifyFile) {
   std::ifstream f(path);
   EXPECT_TRUE(f.good()) << "file not found at: " << path;
 }
+
+#endif  // ENABLE_RECORDER

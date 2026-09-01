@@ -48,19 +48,25 @@ TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls, bool enable_plugi
     init_plugins();
   }
 
+#if ENABLE_RECORDER
   if (enable_snapshot_recorder) {
     snapshot_recorder = std::make_unique<TestRunnerRecorder>(
         (char*)"input_snapshot", 30, true, "/dev/input", m_syscalls);
     snapshot_recorder->Start();
   }
+#else
+  (void)enable_snapshot_recorder;
+#endif
 }
 
 TestRunnerServer::~TestRunnerServer() {
+#if ENABLE_RECORDER
   // Stop recorders first: their threads call m_syscalls (virtual dispatch)
   // which requires m_owned_syscalls to still be alive, and they must not be
   // running when close_input_device() destroys the uinput devices they read.
   snapshot_recorder.reset();
   custom_recorders.clear();
+#endif
 
   for (const int i : mDeviceFd) {
     close_input_device(i);
@@ -515,6 +521,8 @@ void TestRunnerServer::close_input_device(int fd) {
 
 // Recorder interface
 
+#if ENABLE_RECORDER
+
 kj::Promise<void> TestRunnerServer::getSnapshot(GetSnapshotContext context) {
   std::string path = snapshot_recorder->Stop();
   auto ret = context.getResults();
@@ -611,3 +619,5 @@ kj::Promise<void> TestRunnerServer::checkRecorderActive(
   }
   return kj::READY_NOW;
 }
+
+#endif  // ENABLE_RECORDER

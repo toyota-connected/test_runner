@@ -1,12 +1,15 @@
 # SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 # SPDX-License-Identifier: GPLv3
 add_executable(test_runner_unit_tests
-        test_recorder.cpp
         test_server.cpp
         test_client.cpp
         test_integration.cpp
         ServerThreadHelper.cpp
 )
+
+if(BUILD_RECORDER)
+  target_sources(test_runner_unit_tests PRIVATE test_recorder.cpp)
+endif()
 
 target_include_directories(test_runner_unit_tests PRIVATE
         ${CMAKE_SOURCE_DIR}
@@ -27,7 +30,6 @@ target_compile_definitions(test_runner_unit_tests PRIVATE
 
 target_link_libraries(test_runner_unit_tests
         PRIVATE
-        TestRunnerRecorder
         TestRunnerServer
         TestRunnerClient
         CapnProto::capnp-rpc
@@ -38,5 +40,9 @@ target_link_libraries(test_runner_unit_tests
         pthread
         ${XKBCOMMON_LIBRARIES}
 )
+
+if(BUILD_RECORDER)
+  target_link_libraries(test_runner_unit_tests PRIVATE TestRunnerRecorder)
+endif()
 
 add_test(NAME test_runner_unit_tests COMMAND test_runner_unit_tests)

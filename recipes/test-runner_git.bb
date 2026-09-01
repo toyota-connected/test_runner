@@ -13,7 +13,9 @@ DEPENDS += "\
     capnproto-native \
     "
 
-SRCREV = "${AUTOREV}"
+TEST_RUNNER_COMMIT ??= "96e19f8aaf1037f6fb28b38e13b471892e412f5b"
+
+SRCREV = "${TEST_RUNNER_COMMIT}"
 SRC_URI = "git://github.com/toyota-connected/test_runner.git;protocol=https;branch=main"
 
 S = "${WORKDIR}/git"

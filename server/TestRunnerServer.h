@@ -22,7 +22,9 @@ struct XkbConfig {
 
 #include "SyscallInterface.h"
 
+#if ENABLE_RECORDER
 #include "TestRunnerRecorder.h"
+#endif
 #include "spdlog/spdlog.h"
 
 class ErrorHandlerImpl : public kj::TaskSet::ErrorHandler {
@@ -74,7 +76,9 @@ class TestRunnerServer final : virtual public TestRunnerService::Server, public 
   kj::Promise<void> handlePassThrough(
       HandlePassThroughContext context) override;
 
-  // Recorder interface
+  // Recorder interface. Not overridden without BUILD_RECORDER; capnp's
+  // generated bodies answer "unimplemented".
+#if ENABLE_RECORDER
   kj::Promise<void> getSnapshot(GetSnapshotContext context) override;
   kj::Promise<void> createCustomRecorder(
       CreateCustomRecorderContext context) override;
@@ -87,11 +91,14 @@ class TestRunnerServer final : virtual public TestRunnerService::Server, public 
       StopCustomRecordingContext context) override;
   kj::Promise<void> checkRecorderActive(
       CheckRecorderActiveContext context) override;
+#endif
 
  private:
   int mDeviceFd[MAX_DEVICES];
+#if ENABLE_RECORDER
   std::unique_ptr<TestRunnerRecorder> snapshot_recorder;
   std::vector<std::unique_ptr<TestRunnerRecorder>> custom_recorders;
+#endif
   std::unique_ptr<RealSyscalls> m_owned_syscalls;
   SyscallInterface* m_syscalls;
 

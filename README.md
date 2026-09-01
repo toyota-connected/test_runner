@@ -55,6 +55,17 @@ cmake .. -DBUILD_CAPNP=OFF
 
 Minimum required system capnproto version: **0.9.x**.
 
+Recording is on by default. For an injection-only server, with no
+`libTestRunnerRecorder`, no `TestRunner-Recorder` and no snapshot recorder at
+startup:
+
+```bash
+cmake .. -DBUILD_SERVER=ON -DBUILD_EXAMPLES=ON -DBUILD_RECORDER=OFF
+```
+
+The `Recorder` methods stay in the schema and answer `unimplemented`, so clients
+need no rebuild.
+
 ## Permissions
 
 Recording inputs requires the user to be part of group 'input'.  

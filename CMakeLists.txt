@@ -193,6 +193,7 @@ if(BUILD_EXAMPLES)
           CapnProto::kj-async
           spdlog::spdlog
   )
+  install(TARGETS TestRunner-Server)
 
   # ── TestRunnerClientTest executable ──────────────────────────────────────────────────
   add_executable(TestRunnerClientTest
@@ -211,6 +212,7 @@ if(BUILD_EXAMPLES)
           spdlog::spdlog
           TestRunnerClient
   )
+  install(TARGETS TestRunnerClientTest)
 
   if(BUILD_RECORDER)
   # ── TestRunner-Recorder executable ───────────────────────────────────────────────────
@@ -229,6 +231,7 @@ if(BUILD_EXAMPLES)
   target_include_directories(TestRunner-Recorder PRIVATE
           ${CMAKE_BINARY_DIR}
   )
+  install(TARGETS TestRunner-Recorder)
   endif()
 endif()
 

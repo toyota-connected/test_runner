@@ -193,9 +193,6 @@ if(BUILD_EXAMPLES)
           CapnProto::kj-async
           spdlog::spdlog
   )
-  if(BUILD_RECORDER)
-    target_link_libraries(TestRunner-Server PRIVATE TestRunnerRecorder)
-  endif()
 
   # ── TestRunnerClientTest executable ──────────────────────────────────────────────────
   add_executable(TestRunnerClientTest

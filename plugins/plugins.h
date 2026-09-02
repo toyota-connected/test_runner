@@ -10,6 +10,9 @@
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
 #include "agl_health/AglHealth.h"
 #endif
+#ifdef ENABLE_PLUGIN_AGL_SCREENSHOOTER
+#include "agl_screenshooter/AglScreenshooter.h"
+#endif
 
 class TestRunnerPlugins
     : virtual public TestRunnerService::Server
@@ -18,6 +21,9 @@ class TestRunnerPlugins
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
     , public PluginAglHealth
+#endif
+#ifdef ENABLE_PLUGIN_AGL_SCREENSHOOTER
+    , public PluginAglScreenshooter
 #endif
 {
  public:

@@ -21,3 +21,8 @@ foreach(plugin IN LISTS TEST_RUNNER_PLUGINS)
   endif ()
 endforeach()
 
+option(ENABLE_PLUGIN_AGL_SCREENSHOOTER "Enable AGL Screenshooter Plugin" ON)
+if (ENABLE_PLUGIN_AGL_SCREENSHOOTER)
+    add_compile_definitions(ENABLE_PLUGIN_AGL_SCREENSHOOTER)
+endif ()
+

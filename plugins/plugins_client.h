@@ -10,6 +10,9 @@
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
 #include "agl_health/AglHealth_Client.h"
 #endif
+#ifdef ENABLE_PLUGIN_AGL_SCREENSHOOTER
+#include "agl_screenshooter/AglScreenshooter_Client.h"
+#endif
 
 class TestRunnerPluginsClient
     : virtual public RPCClient
@@ -18,6 +21,9 @@ class TestRunnerPluginsClient
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
     , public PluginAglHealthClient
+#endif
+#ifdef ENABLE_PLUGIN_AGL_SCREENSHOOTER
+    , public PluginAglScreenshooterClient
 #endif
 {
  public:

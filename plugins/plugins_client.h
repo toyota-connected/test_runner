@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPLv3
 #pragma once
 
+#include "RPCClient.h"
+
 #ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
 #include "weston_screenshooter/WestonScreenshooter_Client.h"
 #endif
@@ -10,13 +12,12 @@
 #endif
 
 class TestRunnerPluginsClient
-#if defined(ENABLE_PLUGIN_WESTON_SCREENSHOOTER)
-    : public PluginWestonScreenshooterClient
-#if defined(ENABLE_PLUGIN_AGL_HEALTH)
-    , public PluginAglHealthClient
+    : virtual public RPCClient
+#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
+    , public PluginWestonScreenshooterClient
 #endif
-#elif defined(ENABLE_PLUGIN_AGL_HEALTH)
-    : public PluginAglHealthClient
+#ifdef ENABLE_PLUGIN_AGL_HEALTH
+    , public PluginAglHealthClient
 #endif
 {
  public:

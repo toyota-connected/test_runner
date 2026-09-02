@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPLv3
 #pragma once
 
+#include "capnp/test_runner_server.capnp.h"
+
 #ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
 #include "weston_screenshooter/WestonScreenshooter.h"
 #endif
@@ -10,13 +12,12 @@
 #endif
 
 class TestRunnerPlugins
-#if defined(ENABLE_PLUGIN_WESTON_SCREENSHOOTER)
-    : public PluginWestonScreenshooter
-#if defined(ENABLE_PLUGIN_AGL_HEALTH)
-    , public PluginAglHealth
+    : virtual public TestRunnerService::Server
+#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
+    , public PluginWestonScreenshooter
 #endif
-#elif defined(ENABLE_PLUGIN_AGL_HEALTH)
-    : public PluginAglHealth
+#ifdef ENABLE_PLUGIN_AGL_HEALTH
+    , public PluginAglHealth
 #endif
 {
  public:

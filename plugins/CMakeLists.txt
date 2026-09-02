@@ -7,23 +7,25 @@ set(TEST_RUNNER_PLUGIN_LIBS "")
 set(TEST_RUNNER_PLUGIN_SERVER_LIBS "")
 set(TEST_RUNNER_PLUGIN_SERVER_INC "")
 
-if (ENABLE_PLUGIN_WESTON_SCREENSHOOTER)
-	add_subdirectory(weston_screenshooter)
-endif ()
+# Schemas are always compiled so the composite Plugins interface stays intact.
+# Disabled plugins simply fall back to capnp's default "unimplemented" response
+# (same pattern as ENABLE_RECORDER).
+set(TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS "")
 
-if (ENABLE_PLUGIN_AGL_HEALTH)
-	add_subdirectory(agl_health)
-endif ()
+foreach(plugin IN LISTS TEST_RUNNER_PLUGINS)
+  string(TOUPPER ${plugin} plugin_upper)
+  if (ENABLE_PLUGIN_${plugin_upper})
+    add_subdirectory(${plugin})
+  endif ()
+  list(APPEND TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS
+    ${CMAKE_CURRENT_SOURCE_DIR}/${plugin}/${plugin}.capnp
+  )
+endforeach()
 
-# Capnp schemas are always compiled so the composite Plugins interface stays
-# intact.  Disabled plugins simply fall back to capnp's default
-# "unimplemented" response (same pattern as ENABLE_RECORDER).
-set(TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS
-	${CMAKE_CURRENT_SOURCE_DIR}/weston_screenshooter/weston_screenshooter.capnp
-	${CMAKE_CURRENT_SOURCE_DIR}/agl_health/agl_health.capnp
-	${CMAKE_CURRENT_SOURCE_DIR}/plugins.capnp
-	PARENT_SCOPE
+list(APPEND TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS
+  ${CMAKE_CURRENT_SOURCE_DIR}/plugins.capnp
 )
+set(TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS ${TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS} PARENT_SCOPE)
 
 set(TEST_RUNNER_PLUGIN_SRCS
 	${TEST_RUNNER_PLUGIN_SRCS}

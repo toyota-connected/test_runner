@@ -18,6 +18,17 @@ jobs:
 
     runs-on: ubuntu-22.04
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: all-plugins
+            cmake_extra: ""
+          - name: no-plugins
+            cmake_extra: "-DDISABLE_PLUGINS=ON"
+          - name: custom-plugins
+            cmake_extra: "-DENABLE_PLUGIN_WESTON_SCREENSHOOTER=OFF"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,12 +43,13 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          cmake .. -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON
+          cmake .. -DBUILD_SERVER=ON -DBUILD_RECORDER=ON -DBUILD_EXAMPLES=ON -DBUILD_TESTING=OFF -DBUILD_CAPNP=ON ${{ matrix.cmake_extra }}
 
       - name: Build
         run: cmake --build build --parallel $(nproc)
 
       - name: Publish Binary
+        if: matrix.name == 'all-plugins'
         uses: actions/upload-artifact@v4
         with:
           name: test_runner_linux

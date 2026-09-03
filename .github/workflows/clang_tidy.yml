@@ -43,6 +43,7 @@ jobs:
         run: cmake --build build --target capnp_generated
 
       - name: Run clang-tidy
+        shell: bash
         run: |
           # Run against all first-party source files; exclude third_party, test,
           # and generated capnp files.

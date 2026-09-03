@@ -46,6 +46,7 @@ jobs:
         run: cmake --build build --target coverage_baseline
 
       - name: Run unit tests
+        shell: bash
         run: |
           cd build
           ./test/unit/test_runner_unit_tests \

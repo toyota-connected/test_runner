@@ -25,14 +25,13 @@ jobs:
             clang-format
 
       - name: Check formatting
+        shell: bash
         run: |
           find recorder server client plugins \
             \( -name "*.cpp" -o -name "*.h" \) \
             ! -path "*/test/*" \
             | sort \
             | xargs clang-format --dry-run --Werror 2>&1 | tee clang_format_output.txt
-          # clang-format --Werror exits non-zero on any formatting difference;
-          # the tee above preserves output for the artifact even on failure.
 
       - name: Show diff on failure
         if: failure()

@@ -33,8 +33,8 @@ test_runner is a Cap'n Proto RPC service that creates virtual input devices via 
 │          └────────────┘  └──────────────────────┘               │
 │                                                                  │
 │  Plugins (toggle via ENABLE_PLUGIN_*):                           │
-│    WestonScreenshooter ──► Weston compositor                     │
-│    AglHealth           ──► system health via libcurl             │
+│    WaylandScreenshooter ──► Wayland compositor (AGL or Weston)   │
+│    AglHealth             ──► system health via libcurl           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -55,7 +55,7 @@ test_runner is a Cap'n Proto RPC service that creates virtual input devices via 
 capnp/test_runner.capnp                          — core Input and Recorder interfaces
 capnp/test_runner_server.capnp                    — TestRunnerService extends (Input, Recorder, Plugins)
 plugins/plugins.capnp                             — Plugins extends (Screenshooter, AglHealth)
-plugins/weston_screenshooter/weston_screenshooter.capnp — Screenshooter interface
+plugins/wayland_screenshooter/wayland_screenshooter.capnp — Screenshooter interface
 plugins/agl_health/agl_health.capnp               — AglHealth interface
 ```
 
@@ -114,7 +114,7 @@ The `TEST_RUNNER_PLUGINS` list in `cmake/plugins.cmake` is the single source of 
 
 | Plugin | Option | Description |
 |--------|--------|-------------|
-| `weston_screenshooter` | `ENABLE_PLUGIN_WESTON_SCREENSHOOTER` | Captures the Weston compositor framebuffer via the Wayland `screenshooter` protocol |
+| `wayland_screenshooter` | `ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER` | Captures the compositor framebuffer via the Wayland screenshooter protocol (auto-detects `agl_screenshooter` and `weston_screenshooter` at runtime) |
 | `agl_health` | `ENABLE_PLUGIN_AGL_HEALTH` | Queries AGL system health status via libcurl |
 
 ## RPC Transport

@@ -1,14 +1,17 @@
 // SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 // SPDX-License-Identifier: GPLv3
-#include "WestonScreenshooter_Client.h"
+#include "WaylandScreenshooter_Client.h"
 #include <kj/debug.h>
-#include <cstring>
 #include "spdlog/spdlog.h"
 
-ScreenshotResult PluginWestonScreenshooterClient::TakeScreenshot() {
+ScreenshotResult PluginWaylandScreenshooterClient::TakeScreenshot(
+    const std::string& outputName) {
   KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
   auto screenshooter = getMain<Screenshooter>();
-  auto response = waitWithTimeout(screenshooter.takeScreenshotRequest().send());
+  auto request = screenshooter.takeScreenshotRequest();
+  if (!outputName.empty())
+    request.setOutputName(outputName);
+  auto response = waitWithTimeout(request.send());
   spdlog::debug("TakeScreenshot response: {}x{}", response.getWidth(),
                 response.getHeight());
   ScreenshotResult result;

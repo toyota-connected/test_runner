@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 # SPDX-License-Identifier: GPLv3
-# Plugin: AglScreenshooter
+# Plugin: WaylandScreenshooter
 
 if(BUILD_SERVER)
   find_package(PkgConfig REQUIRED)
@@ -20,12 +20,13 @@ endif()
 
 set(TEST_RUNNER_PLUGIN_SRCS
         ${TEST_RUNNER_PLUGIN_SRCS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/AglScreenshooter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/WaylandScreenshooter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/WaylandCapture.cpp
         PARENT_SCOPE
 )
 
 set(TEST_RUNNER_PLUGIN_CLIENT_SRCS
         ${TEST_RUNNER_PLUGIN_CLIENT_SRCS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/AglScreenshooter_Client.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/WaylandScreenshooter_Client.cpp
         PARENT_SCOPE
 )

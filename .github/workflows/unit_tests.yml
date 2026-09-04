@@ -53,7 +53,10 @@ jobs:
             --gtest_output="xml:test_results.xml" \
             2>&1 | tee test_output.txt
 
+      # if: always() so a genuine test failure (which pipefail now surfaces
+      # above) still produces coverage.info for the summary step below.
       - name: Generate coverage report
+        if: always()
         run: cmake --build build --target coverage
 
       - name: Summarise results
@@ -76,26 +79,33 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          lcov --summary coverage.info 2>&1 | grep -E "lines|functions|branches" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          # Guarded: if the coverage step above failed there is no
+          # coverage.info, and the greps below would fail the whole step and
+          # swallow the test summary already written.
+          if [ -f coverage.info ]; then
+            echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            lcov --summary coverage.info 2>&1 | grep -E "lines|functions|branches" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Per-file coverage" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| File | Lines | Functions |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
-          lcov --list coverage.info 2>&1 \
-            | grep -E "\.(cpp|h)\s" \
-            | awk -F'|' '{
-                file=$1; lines=$2; funcs=$3;
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", file);
-                match(lines, /[0-9.]+%|[0-9]+%/); lp=substr(lines, RSTART, RLENGTH);
-                match(funcs, /[0-9.]+%|[0-9]+%/); fp=substr(funcs, RSTART, RLENGTH);
-                printf "| %s | %s | %s |\n", file, lp, fp
-              }' >> $GITHUB_STEP_SUMMARY
+            echo "### Per-file coverage" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| File | Lines | Functions |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+            lcov --list coverage.info 2>&1 \
+              | grep -E "\.(cpp|h)\s" \
+              | awk -F'|' '{
+                  file=$1; lines=$2; funcs=$3;
+                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", file);
+                  match(lines, /[0-9.]+%|[0-9]+%/); lp=substr(lines, RSTART, RLENGTH);
+                  match(funcs, /[0-9.]+%|[0-9]+%/); fp=substr(funcs, RSTART, RLENGTH);
+                  printf "| %s | %s | %s |\n", file, lp, fp
+                }' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "_Coverage report unavailable._" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload coverage HTML report
         if: always()

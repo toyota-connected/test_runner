@@ -4,8 +4,8 @@
 
 #include "RPCClient.h"
 
-#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
-#include "weston_screenshooter/WestonScreenshooter_Client.h"
+#ifdef ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER
+#include "wayland_screenshooter/WaylandScreenshooter_Client.h"
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
 #include "agl_health/AglHealth_Client.h"
@@ -16,8 +16,8 @@
 // leading commas onto their own lines when it reformats across #ifdef.
 class TestRunnerPluginsClient
     : virtual public RPCClient
-#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
-    , public PluginWestonScreenshooterClient
+#ifdef ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER
+    , public PluginWaylandScreenshooterClient
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
     , public PluginAglHealthClient

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPLv3
 #pragma once
 
-#include "weston_screenshooter/WestonScreenshooter_Client.h"
 #include "agl_health/AglHealth_Client.h"
+#include "weston_screenshooter/WestonScreenshooter_Client.h"
 
 class TestRunnerPluginsClient : public PluginWestonScreenshooterClient,
                                 public PluginAglHealthClient {

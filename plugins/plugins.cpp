@@ -5,6 +5,4 @@
 
 // Put any necessary plugin initialization that can't be done in the constructor
 // here.
-void TestRunnerPlugins::init_plugins() {
-
-}
+void TestRunnerPlugins::init_plugins() {}

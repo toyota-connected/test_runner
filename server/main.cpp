@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 // SPDX-License-Identifier: GPLv3
 #include <getopt.h>
-#include <csignal>
 #include <unistd.h>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
@@ -29,7 +29,8 @@ static void usage(const char* program_name) {
   printf(
       "\nOptions:\n"
       "  -l hostname/ip       listen address (default: *:4004)\n"
-      "  -L layout            XKB keyboard layout (default: XKB_DEFAULT_LAYOUT env or system default)\n"
+      "  -L layout            XKB keyboard layout (default: XKB_DEFAULT_LAYOUT "
+      "env or system default)\n"
       "  -V variant           XKB layout variant\n"
       "  -M model             XKB keyboard model\n"
       "  -h  --help           show this help text and exit\n");
@@ -41,13 +42,15 @@ int main(int argc, char** argv) {
   const char* listen_addr = DEFAULT_LISTEN;
   XkbConfig xkb_cfg;
 
-  constexpr option long_options[] = {{"help",        no_argument,       nullptr, 'h'},
-                                     {"xkb-layout",  required_argument, nullptr, 'L'},
-                                     {"xkb-variant", required_argument, nullptr, 'V'},
-                                     {"xkb-model",   required_argument, nullptr, 'M'},
-                                     {nullptr,        0,                nullptr,  0 }};
+  constexpr option long_options[] = {
+      {"help", no_argument, nullptr, 'h'},
+      {"xkb-layout", required_argument, nullptr, 'L'},
+      {"xkb-variant", required_argument, nullptr, 'V'},
+      {"xkb-model", required_argument, nullptr, 'M'},
+      {nullptr, 0, nullptr, 0}};
   int ch;
-  while ((ch = getopt_long(argc, argv, "hl:L:V:M:", long_options, nullptr)) > 0) {
+  while ((ch = getopt_long(argc, argv, "hl:L:V:M:", long_options, nullptr)) >
+         0) {
     switch (ch) {
       case 'l':
         listen_addr = optarg;
@@ -77,8 +80,8 @@ int main(int argc, char** argv) {
   signal(SIGTERM, signal_handler);
   signal(SIGINT, signal_handler);
 
-  auto server =
-      std::make_unique<capnp::EzRpcServer>(kj::heap<TestRunnerServer>(nullptr, true, true, xkb_cfg), listen_addr);
+  auto server = std::make_unique<capnp::EzRpcServer>(
+      kj::heap<TestRunnerServer>(nullptr, true, true, xkb_cfg), listen_addr);
   SPDLOG_INFO("Test Runner server listening on {}", listen_addr);
 
   auto& waitScope = server->getWaitScope();

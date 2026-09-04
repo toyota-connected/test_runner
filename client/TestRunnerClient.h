@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "RPCClient.h"
-#include "capnp/test_runner_server.capnp.h"
 #include "capnp/test_runner.capnp.h"
+#include "capnp/test_runner_server.capnp.h"
 #include "plugins_client.h"
 #include "spdlog/spdlog.h"
 
@@ -52,7 +52,8 @@ struct in_device_s {
   input_absinfo abs_range_y;
 };
 
-class TestRunnerClient : virtual public RPCClient, public TestRunnerPluginsClient {
+class TestRunnerClient : virtual public RPCClient,
+                         public TestRunnerPluginsClient {
  public:
   TestRunnerClient();
   ~TestRunnerClient() = default;
@@ -72,7 +73,8 @@ class TestRunnerClient : virtual public RPCClient, public TestRunnerPluginsClien
   uint8_t createCustomRecorder(const std::string& filename,
                                uint32_t length,
                                bool continuous);
-  void setDevicesToRecord(uint8_t index, const std::vector<in_device_s>& devices);
+  void setDevicesToRecord(uint8_t index,
+                          const std::vector<in_device_s>& devices);
   std::vector<in_device_s> listDevices(uint8_t index);
   void startCustomRecording(uint8_t index);
   std::string stopCustomRecording(uint8_t index);

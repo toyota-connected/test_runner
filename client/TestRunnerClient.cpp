@@ -62,7 +62,8 @@ void TestRunnerClient::SendKeyPressByKeySym(uint32_t keySym, bool pressed) {
   spdlog::debug("keyPress sent: keySym=0x{:x} pressed={}", keySym, pressed);
 }
 
-void TestRunnerClient::SendKeyPressByName(const std::string& name, bool pressed) {
+void TestRunnerClient::SendKeyPressByName(const std::string& name,
+                                          bool pressed) {
   KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
   auto input = getMain<Input>();
   auto request = input.handleKeyPressRequest();
@@ -92,7 +93,8 @@ void TestRunnerClient::SendMultiTouch(multiTouch touches[], int count) {
   auto multiTouchList = request.initMultiTouch(count);
   for (int i = 0; i < count; i++) {
     multiTouchList[i].setSlot(static_cast<int8_t>(touches[i].slot));
-    multiTouchList[i].setTrackingId(static_cast<int16_t>(touches[i].tracking_id));
+    multiTouchList[i].setTrackingId(
+        static_cast<int16_t>(touches[i].tracking_id));
     multiTouchList[i].setAbsX(touches[i].x);
     multiTouchList[i].setAbsY(touches[i].y);
   }
@@ -100,7 +102,10 @@ void TestRunnerClient::SendMultiTouch(multiTouch touches[], int count) {
   spdlog::debug("multiTouch sent: count={}", count);
 }
 
-void TestRunnerClient::SendPassThrough(int device, int type, int code, int val) {
+void TestRunnerClient::SendPassThrough(int device,
+                                       int type,
+                                       int code,
+                                       int val) {
   KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
   auto input = getMain<Input>();
   auto request = input.handlePassThroughRequest();
@@ -122,8 +127,8 @@ std::string TestRunnerClient::getSnapshot() {
 }
 
 uint8_t TestRunnerClient::createCustomRecorder(const std::string& filename,
-                                        uint32_t length,
-                                        bool continuous) {
+                                               uint32_t length,
+                                               bool continuous) {
   KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
   auto recorder = getMain<Recorder>();
   auto request = recorder.createCustomRecorderRequest();
@@ -134,8 +139,9 @@ uint8_t TestRunnerClient::createCustomRecorder(const std::string& filename,
   return response.getIndex();
 }
 
-void TestRunnerClient::setDevicesToRecord(uint8_t index,
-                                   const std::vector<in_device_s>& devices) {
+void TestRunnerClient::setDevicesToRecord(
+    uint8_t index,
+    const std::vector<in_device_s>& devices) {
   KJ_REQUIRE(isConnected, "Not connected to Test Runner server");
   auto recorder = getMain<Recorder>();
   auto request = recorder.setDevicesToRecordRequest();

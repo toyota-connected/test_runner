@@ -24,9 +24,16 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             clang-format
 
+      # shell: bash gives `bash -eo pipefail`; the implicit shell is `bash -e`
+      # without pipefail, so the step would exit with tee's status and never
+      # fail. Applied per-step on purpose -- see unit_tests.yml, where the
+      # summary step pipes into grep and would break under pipefail.
       - name: Check formatting
         shell: bash
         run: |
+          # clang-format --Werror exits non-zero on any formatting difference;
+          # pipefail is what lets that status survive the tee, which is here so
+          # the output is still captured for the artifact on failure.
           find recorder server client plugins \
             \( -name "*.cpp" -o -name "*.h" \) \
             ! -path "*/test/*" \

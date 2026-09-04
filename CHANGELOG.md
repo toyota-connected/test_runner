@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`DISABLE_PLUGINS` CMake option** — pass `-DDISABLE_PLUGINS=ON` to turn off all plugins at once
+- **CI plugin matrix** — Ubuntu 22.04 workflow now builds all-plugins, no-plugins, and custom-plugins configurations
+
+### Fixed
+
+- **Plugin toggling** — `ENABLE_PLUGIN_*` CMake options now correctly exclude disabled plugins from the build via `#ifdef` guards in `plugins.h` and `plugins_client.h`
+
+### Changed
+
+- **Plugin list consolidation** — `TEST_RUNNER_PLUGINS` in `cmake/plugins.cmake` is now the single source of truth for plugin registration; `add_subdirectory()` and capnp schema collection are driven from it
+
 ## [0.1.0] — 2026-05-07
 
 Initial public release.

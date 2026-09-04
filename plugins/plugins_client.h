@@ -2,11 +2,28 @@
 // SPDX-License-Identifier: GPLv3
 #pragma once
 
-#include "agl_health/AglHealth_Client.h"
-#include "weston_screenshooter/WestonScreenshooter_Client.h"
+#include "RPCClient.h"
 
-class TestRunnerPluginsClient : public PluginWestonScreenshooterClient,
-                                public PluginAglHealthClient {
+#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
+#include "weston_screenshooter/WestonScreenshooter_Client.h"
+#endif
+#ifdef ENABLE_PLUGIN_AGL_HEALTH
+#include "agl_health/AglHealth_Client.h"
+#endif
+
+// clang-format off
+// The base-class list is preprocessor-guarded; clang-format moves the
+// leading commas onto their own lines when it reformats across #ifdef.
+class TestRunnerPluginsClient
+    : virtual public RPCClient
+#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
+    , public PluginWestonScreenshooterClient
+#endif
+#ifdef ENABLE_PLUGIN_AGL_HEALTH
+    , public PluginAglHealthClient
+#endif
+{
+  // clang-format on
  public:
   TestRunnerPluginsClient() = default;
   ~TestRunnerPluginsClient() = default;

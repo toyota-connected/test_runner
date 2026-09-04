@@ -35,8 +35,8 @@ class ErrorHandlerImpl : public kj::TaskSet::ErrorHandler {
 };
 #include "plugins.h"
 
-#include "capnp/test_runner_server.capnp.h"
 #include "capnp/test_runner.capnp.h"
+#include "capnp/test_runner_server.capnp.h"
 
 enum {
   VIRTUAL_MOUSE = 0,
@@ -50,12 +50,13 @@ enum {
 
 #define MAX_CUSTOM_RECORDERS 20
 
-class TestRunnerServer final : virtual public TestRunnerService::Server, public TestRunnerPlugins {
+class TestRunnerServer final : virtual public TestRunnerService::Server,
+                               public TestRunnerPlugins {
  public:
   explicit TestRunnerServer(SyscallInterface* syscalls = nullptr,
-                     bool enable_plugins = true,
-                     bool enable_snapshot_recorder = true,
-                     const XkbConfig& xkb_cfg = {});
+                            bool enable_plugins = true,
+                            bool enable_snapshot_recorder = true,
+                            const XkbConfig& xkb_cfg = {});
   ~TestRunnerServer();
 
   void emit(int fd, int type, int code, int val);

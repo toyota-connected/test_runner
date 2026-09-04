@@ -59,7 +59,8 @@ struct input_record_s {
   int input_type;
   int input_code;
   int input_val;
-  uint32_t keysym;  // XKB keysym for EV_KEY events on keyboard devices; 0 otherwise
+  uint32_t
+      keysym;  // XKB keysym for EV_KEY events on keyboard devices; 0 otherwise
 };
 
 // Forward declaration — defined in test/mocks/SyscallInterface.h (tests) or
@@ -73,10 +74,10 @@ class TestRunnerRecorderTestPeer;
 class TestRunnerRecorder {
  public:
   TestRunnerRecorder(char* filename,
-              uint32_t length,
-              bool continuous,
-              std::string input_directory = "/dev/input",
-              SyscallInterface* syscalls = nullptr);
+                     uint32_t length,
+                     bool continuous,
+                     std::string input_directory = "/dev/input",
+                     SyscallInterface* syscalls = nullptr);
   ~TestRunnerRecorder();
 
   std::vector<in_device_s> listDevices();

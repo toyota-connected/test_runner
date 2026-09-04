@@ -19,16 +19,18 @@
 #include <capnp/message.h>
 #include <capnp/serialize.h>
 
-#include "capnp/test_runner_server.capnp.h"
 #include "capnp/test_runner.capnp.h"
+#include "capnp/test_runner_server.capnp.h"
 
 #include "spdlog/spdlog.h"
 
 static ErrorHandlerImpl errorHandler;
 static kj::TaskSet taskSet_(errorHandler);
 
-TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls, bool enable_plugins,
-                     bool enable_snapshot_recorder, const XkbConfig& xkb_cfg)
+TestRunnerServer::TestRunnerServer(SyscallInterface* syscalls,
+                                   bool enable_plugins,
+                                   bool enable_snapshot_recorder,
+                                   const XkbConfig& xkb_cfg)
     : mDeviceFd{-1, -1, -1, -1} {
   if (syscalls != nullptr) {
     m_syscalls = syscalls;
@@ -72,8 +74,10 @@ TestRunnerServer::~TestRunnerServer() {
     close_input_device(i);
   }
 
-  if (m_xkb_keymap) xkb_keymap_unref(m_xkb_keymap);
-  if (m_xkb_ctx) xkb_context_unref(m_xkb_ctx);
+  if (m_xkb_keymap)
+    xkb_keymap_unref(m_xkb_keymap);
+  if (m_xkb_ctx)
+    xkb_context_unref(m_xkb_ctx);
 }
 
 void TestRunnerServer::setup_virtual_keyboard() {
@@ -83,7 +87,8 @@ void TestRunnerServer::setup_virtual_keyboard() {
   if (mDeviceFd[VIRTUAL_KEYBOARD] >= 0) {
     uinput_capability_setup(mDeviceFd[VIRTUAL_KEYBOARD], UI_SET_EVBIT, EV_KEY);
     for (uint16_t key = KEY_ESC; key < KEY_MAX; key++) {
-      result = m_syscalls->ioctl_int(mDeviceFd[VIRTUAL_KEYBOARD], UI_SET_KEYBIT, key);
+      result = m_syscalls->ioctl_int(mDeviceFd[VIRTUAL_KEYBOARD], UI_SET_KEYBIT,
+                                     key);
       if (result < 0) {
         spdlog::error("Failed to init key: {}", key);
       }
@@ -96,12 +101,14 @@ void TestRunnerServer::setup_virtual_keyboard() {
     ui_setup.id.product = 0x47;
     ui_setup.id.version = 1;
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_KEYBOARD], UI_DEV_SETUP, &ui_setup);
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_KEYBOARD], UI_DEV_SETUP, &ui_setup);
     if (result < 0) {
       spdlog::error("Failed to setup virtual keyboard: {}", errno);
     }
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_KEYBOARD], UI_DEV_CREATE, nullptr);
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_KEYBOARD], UI_DEV_CREATE, nullptr);
     if (result < 0) {
       spdlog::error("Failed to create virtual keyboard: {}", errno);
       m_syscalls->ioctl(mDeviceFd[VIRTUAL_KEYBOARD], UI_DEV_DESTROY, nullptr);
@@ -122,20 +129,23 @@ void TestRunnerServer::setup_xkb(const XkbConfig& cfg) {
   }
 
   auto env_or = [](const std::string& val, const char* env) -> const char* {
-    if (!val.empty()) return val.c_str();
+    if (!val.empty())
+      return val.c_str();
     return getenv(env);
   };
 
   xkb_rule_names rules{};
-  rules.rules   = env_or(cfg.rules,   "XKB_DEFAULT_RULES");
-  rules.model   = env_or(cfg.model,   "XKB_DEFAULT_MODEL");
-  rules.layout  = env_or(cfg.layout,  "XKB_DEFAULT_LAYOUT");
+  rules.rules = env_or(cfg.rules, "XKB_DEFAULT_RULES");
+  rules.model = env_or(cfg.model, "XKB_DEFAULT_MODEL");
+  rules.layout = env_or(cfg.layout, "XKB_DEFAULT_LAYOUT");
   rules.variant = env_or(cfg.variant, "XKB_DEFAULT_VARIANT");
   rules.options = env_or(cfg.options, "XKB_DEFAULT_OPTIONS");
 
-  m_xkb_keymap = xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  m_xkb_keymap =
+      xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
   if (!m_xkb_keymap) {
-    spdlog::error("XKB keymap compilation failed — keySym/keyName injection disabled");
+    spdlog::error(
+        "XKB keymap compilation failed — keySym/keyName injection disabled");
     xkb_context_unref(m_xkb_ctx);
     m_xkb_ctx = nullptr;
     return;
@@ -147,17 +157,21 @@ void TestRunnerServer::setup_xkb(const XkbConfig& cfg) {
 }
 
 uint32_t TestRunnerServer::resolve_keysym(xkb_keysym_t target_sym) const {
-  if (!m_xkb_keymap) return 0;
+  if (!m_xkb_keymap)
+    return 0;
   // Search unshifted level first, then shifted, to prefer the simpler mapping.
   for (uint32_t level = 0; level <= 1; level++) {
     for (uint32_t evdev = KEY_ESC; evdev < KEY_MAX; evdev++) {
       auto xkb_code = static_cast<xkb_keycode_t>(evdev + 8);
-      uint32_t num_layouts = xkb_keymap_num_layouts_for_key(m_xkb_keymap, xkb_code);
+      uint32_t num_layouts =
+          xkb_keymap_num_layouts_for_key(m_xkb_keymap, xkb_code);
       for (uint32_t layout_idx = 0; layout_idx < num_layouts; layout_idx++) {
         const xkb_keysym_t* syms = nullptr;
-        int n = xkb_keymap_key_get_syms_by_level(m_xkb_keymap, xkb_code, layout_idx, level, &syms);
+        int n = xkb_keymap_key_get_syms_by_level(m_xkb_keymap, xkb_code,
+                                                 layout_idx, level, &syms);
         for (int i = 0; i < n; i++) {
-          if (syms[i] == target_sym) return evdev;
+          if (syms[i] == target_sym)
+            return evdev;
         }
       }
     }
@@ -172,12 +186,14 @@ void TestRunnerServer::setup_virtual_touchscreen() {
 
   mDeviceFd[VIRTUAL_TOUCHSCREEN] = m_syscalls->open("/dev/uinput", O_WRONLY);
   if (mDeviceFd[VIRTUAL_TOUCHSCREEN] >= 0) {
-    uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_EVBIT, EV_KEY);
+    uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_EVBIT,
+                            EV_KEY);
     for (const int i : keys_enabled) {
       uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_KEYBIT, i);
     }
 
-    uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_EVBIT, EV_ABS);
+    uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_EVBIT,
+                            EV_ABS);
     for (const int i : abs_move_enabled) {
       uinput_capability_setup(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_SET_ABSBIT, i);
     }
@@ -222,7 +238,8 @@ void TestRunnerServer::setup_virtual_touchscreen() {
                                nullptr);
     if (result < 0) {
       spdlog::error("Failed to create virtual touchscreen: {}", errno);
-      m_syscalls->ioctl(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_DEV_DESTROY, nullptr);
+      m_syscalls->ioctl(mDeviceFd[VIRTUAL_TOUCHSCREEN], UI_DEV_DESTROY,
+                        nullptr);
     }
 
     m_syscalls->usleep(250000);
@@ -244,15 +261,15 @@ void TestRunnerServer::setup_virtual_multi_touchscreen() {
     uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_SET_EVBIT,
                             EV_KEY);
     for (int i : keys_enabled) {
-      uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_SET_KEYBIT,
-                              i);
+      uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN],
+                              UI_SET_KEYBIT, i);
     }
 
     uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_SET_EVBIT,
                             EV_ABS);
     for (int i : abs_move_enabled) {
-      uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_SET_ABSBIT,
-                              i);
+      uinput_capability_setup(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN],
+                              UI_SET_ABSBIT, i);
     }
 
     uinput_setup ui_setup{};
@@ -268,8 +285,8 @@ void TestRunnerServer::setup_virtual_multi_touchscreen() {
       spdlog::error("Failed to set propbit: {}", errno);
     }
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_DEV_SETUP,
-                               &ui_setup);
+    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN],
+                               UI_DEV_SETUP, &ui_setup);
     if (result < 0) {
       spdlog::error("Failed to setup virtual multi-touchscreen: {}", errno);
     }
@@ -277,16 +294,18 @@ void TestRunnerServer::setup_virtual_multi_touchscreen() {
     static constexpr uinput_abs_setup abs_mt_x_setup = {
         .code = ABS_MT_POSITION_X,
         .absinfo = {.minimum = 0, .maximum = VIRTUAL_MULTITOUCH_ABS_X_MAX}};
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_ABS_SETUP,
-                               const_cast<uinput_abs_setup*>(&abs_mt_x_setup));
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_ABS_SETUP,
+                          const_cast<uinput_abs_setup*>(&abs_mt_x_setup));
     if (result < 0) {
       spdlog::error("Failed to setup ABS_MT_X: {}", errno);
     }
     static constexpr uinput_abs_setup abs_mt_y_setup = {
         .code = ABS_MT_POSITION_Y,
         .absinfo = {.minimum = 0, .maximum = VIRTUAL_MULTITOUCH_ABS_Y_MAX}};
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_ABS_SETUP,
-                               const_cast<uinput_abs_setup*>(&abs_mt_y_setup));
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_ABS_SETUP,
+                          const_cast<uinput_abs_setup*>(&abs_mt_y_setup));
     if (result < 0) {
       spdlog::error("Failed to setup ABS_MT_Y: {}", errno);
     }
@@ -299,8 +318,8 @@ void TestRunnerServer::setup_virtual_multi_touchscreen() {
       spdlog::error("Failed to setup ABS_MT_SLOT: {}", errno);
     }
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_DEV_CREATE,
-                               nullptr);
+    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN],
+                               UI_DEV_CREATE, nullptr);
     if (result < 0) {
       spdlog::error("Failed to create virtual multi-touchscreen: {}", errno);
       m_syscalls->ioctl(mDeviceFd[VIRTUAL_MULTI_TOUCHSCREEN], UI_DEV_DESTROY,
@@ -338,12 +357,14 @@ void TestRunnerServer::setup_virtual_mouse() {
     ui_setup.id.product = 0x45;
     ui_setup.id.version = 1;
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MOUSE], UI_DEV_SETUP, &ui_setup);
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_MOUSE], UI_DEV_SETUP, &ui_setup);
     if (result < 0) {
       spdlog::error("Failed to setup virtual mouse: {}", errno);
     }
 
-    result = m_syscalls->ioctl(mDeviceFd[VIRTUAL_MOUSE], UI_DEV_CREATE, nullptr);
+    result =
+        m_syscalls->ioctl(mDeviceFd[VIRTUAL_MOUSE], UI_DEV_CREATE, nullptr);
     if (result < 0) {
       spdlog::error("Failed to create virtual mouse: {}", errno);
       m_syscalls->ioctl(mDeviceFd[VIRTUAL_MOUSE], UI_DEV_DESTROY, nullptr);
@@ -356,7 +377,8 @@ void TestRunnerServer::setup_virtual_mouse() {
   }
 }
 
-kj::Promise<void> TestRunnerServer::handleMouseMove(HandleMouseMoveContext context) {
+kj::Promise<void> TestRunnerServer::handleMouseMove(
+    HandleMouseMoveContext context) {
   const auto mouseMove = context.getParams().getMouseMove();
   spdlog::debug("MouseMove received: relX={}, relY={}", mouseMove.getRelX(),
                 mouseMove.getRelY());
@@ -367,7 +389,8 @@ kj::Promise<void> TestRunnerServer::handleMouseMove(HandleMouseMoveContext conte
   return kj::READY_NOW;
 }
 
-kj::Promise<void> TestRunnerServer::handleMouseClick(HandleMouseClickContext context) {
+kj::Promise<void> TestRunnerServer::handleMouseClick(
+    HandleMouseClickContext context) {
   const auto mouseClick = context.getParams().getMouseClick();
   spdlog::debug("MouseClick received: btn={}, pressed={}", mouseClick.getBtn(),
                 mouseClick.getPressed());
@@ -378,7 +401,8 @@ kj::Promise<void> TestRunnerServer::handleMouseClick(HandleMouseClickContext con
   return kj::READY_NOW;
 }
 
-kj::Promise<void> TestRunnerServer::handleKeyPress(HandleKeyPressContext context) {
+kj::Promise<void> TestRunnerServer::handleKeyPress(
+    HandleKeyPressContext context) {
   const auto keyPress = context.getParams().getKeyPress();
   uint32_t evdev_code = 0;
 
@@ -387,9 +411,11 @@ kj::Promise<void> TestRunnerServer::handleKeyPress(HandleKeyPressContext context
       evdev_code = keyPress.getRawCode();
       break;
     case KeyPress::KEY_SYM: {
-      evdev_code = resolve_keysym(static_cast<xkb_keysym_t>(keyPress.getKeySym()));
+      evdev_code =
+          resolve_keysym(static_cast<xkb_keysym_t>(keyPress.getKeySym()));
       if (!evdev_code) {
-        spdlog::warn("No keycode found for keysym 0x{:x}", keyPress.getKeySym());
+        spdlog::warn("No keycode found for keysym 0x{:x}",
+                     keyPress.getKeySym());
         context.getResults();
         return kj::READY_NOW;
       }
@@ -413,7 +439,8 @@ kj::Promise<void> TestRunnerServer::handleKeyPress(HandleKeyPressContext context
     }
   }
 
-  spdlog::debug("KeyPress received: code={}, pressed={}", evdev_code, keyPress.getPressed());
+  spdlog::debug("KeyPress received: code={}, pressed={}", evdev_code,
+                keyPress.getPressed());
   emit(getDeviceFd(VIRTUAL_KEYBOARD), EV_KEY, static_cast<int>(evdev_code),
        keyPress.getPressed());
   emit(getDeviceFd(VIRTUAL_KEYBOARD), EV_SYN, SYN_REPORT, 0);
@@ -442,7 +469,8 @@ kj::Promise<void> TestRunnerServer::handleSingleTouch(
   return kj::READY_NOW;
 }
 
-kj::Promise<void> TestRunnerServer::handleMultiTouch(HandleMultiTouchContext context) {
+kj::Promise<void> TestRunnerServer::handleMultiTouch(
+    HandleMultiTouchContext context) {
   const auto multiTouchList = context.getParams().getMultiTouch();
   spdlog::debug("MultiTouch received:");
   for (const auto& multiTouch : multiTouchList) {
@@ -478,7 +506,8 @@ kj::Promise<void> TestRunnerServer::handlePassThrough(
   spdlog::debug("Passthrough Device:{} Type:{} Code:{} Value:{}",
                 passThrough.getDevice(), passThrough.getType(),
                 passThrough.getCode(), passThrough.getValue());
-  emit(getDeviceFd(passThrough.getDevice()), static_cast<int>(passThrough.getType()),
+  emit(getDeviceFd(passThrough.getDevice()),
+       static_cast<int>(passThrough.getType()),
        static_cast<int>(passThrough.getCode()), passThrough.getValue());
   context.getResults();
   return kj::READY_NOW;
@@ -499,8 +528,7 @@ void TestRunnerServer::emit(int fd, int type, int code, int val) {
   ie.value = val;
   int result = -1;
   if (fd >= 0) {
-    result = static_cast<int>(
-        m_syscalls->write(fd, &ie, sizeof(ie)));
+    result = static_cast<int>(m_syscalls->write(fd, &ie, sizeof(ie)));
   }
   if (result < 0) {
     spdlog::error("Error writing to uinput device: {}", errno);

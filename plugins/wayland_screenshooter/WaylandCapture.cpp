@@ -34,7 +34,11 @@ WaylandOutputInfo* select_output(WaylandCaptureBase* s,
 
 static void on_output_geometry(void* data,
                                wl_output* output,
-                               int32_t, int32_t, int32_t, int32_t, int32_t,
+                               int32_t,
+                               int32_t,
+                               int32_t,
+                               int32_t,
+                               int32_t,
                                const char*,
                                const char* model,
                                int32_t) {
@@ -68,8 +72,10 @@ const wl_output_listener wayland_output_listener = {
     on_output_scale,
 };
 
-bool bind_common_globals(WaylandCaptureBase* s, wl_registry* registry,
-                         uint32_t name, const char* interface,
+bool bind_common_globals(WaylandCaptureBase* s,
+                         wl_registry* registry,
+                         uint32_t name,
+                         const char* interface,
                          uint32_t version) {
   if (strcmp(interface, "wl_shm") == 0) {
     s->shm = static_cast<wl_shm*>(
@@ -81,21 +87,21 @@ bool bind_common_globals(WaylandCaptureBase* s, wl_registry* registry,
     info.output = static_cast<wl_output*>(wl_registry_bind(
         registry, name, &wl_output_interface, version < 3 ? version : 3));
     s->outputs.push_back(info);
-    wl_output_add_listener(s->outputs.back().output,
-                           &wayland_output_listener, s);
+    wl_output_add_listener(s->outputs.back().output, &wayland_output_listener,
+                           s);
     return true;
   }
   return false;
 }
 
 WaylandShmBuffer create_shm_buffer(WaylandCaptureBase* s,
-                                   int32_t width, int32_t height) {
+                                   int32_t width,
+                                   int32_t height) {
   const int32_t stride = width * 4;  // XRGB8888 — 4 bytes per pixel
-  const size_t size =
-      static_cast<size_t>(stride) * static_cast<size_t>(height);
+  const size_t size = static_cast<size_t>(stride) * static_cast<size_t>(height);
 
-  int fd = static_cast<int>(
-      syscall(SYS_memfd_create, "test-runner-screenshot", 0));
+  int fd =
+      static_cast<int>(syscall(SYS_memfd_create, "test-runner-screenshot", 0));
   if (fd < 0) {
     s->result.error = "memfd_create failed";
     return {};
@@ -116,8 +122,8 @@ WaylandShmBuffer create_shm_buffer(WaylandCaptureBase* s,
 
   wl_shm_pool* pool =
       wl_shm_create_pool(s->shm, fd, static_cast<int32_t>(size));
-  wl_buffer* buffer = wl_shm_pool_create_buffer(
-      pool, 0, width, height, stride, WL_SHM_FORMAT_XRGB8888);
+  wl_buffer* buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride,
+                                                WL_SHM_FORMAT_XRGB8888);
   wl_shm_pool_destroy(pool);
   close(fd);
 
@@ -144,7 +150,8 @@ void cleanup_wayland_base(WaylandCaptureBase* s) {
 }
 
 // ===========================================================================
-// Protocol definitions — agl_screenshooter (verified against agl-screenshooter.xml)
+// Protocol definitions — agl_screenshooter (verified against
+// agl-screenshooter.xml)
 // ===========================================================================
 
 extern "C" {
@@ -159,8 +166,8 @@ static const struct wl_message agl_screenshooter_events[] = {
 };
 
 static const struct wl_interface agl_screenshooter_interface = {
-    "agl_screenshooter",          1, 2,
-    agl_screenshooter_requests,   1, agl_screenshooter_events,
+    "agl_screenshooter",        1, 2,
+    agl_screenshooter_requests, 1, agl_screenshooter_events,
 };
 
 }  // extern "C"
@@ -299,9 +306,7 @@ static const wl_registry_listener auto_registry_listener = {
     on_auto_registry_global_remove,
 };
 
-static void on_agl_shoot_done(void* data,
-                              agl_screenshooter*,
-                              uint32_t status) {
+static void on_agl_shoot_done(void* data, agl_screenshooter*, uint32_t status) {
   auto* s = static_cast<AutoCaptureState*>(data);
   s->agl_done_status = status;
   s->finished = true;
@@ -374,8 +379,7 @@ ScreenshotResult wayland_capture_screenshot(const std::string& output_name) {
       goto cleanup;
 
     if (use_agl) {
-      agl_screenshooter_add_listener(s.agl_shooter,
-                                     &agl_shooter_listener, &s);
+      agl_screenshooter_add_listener(s.agl_shooter, &agl_shooter_listener, &s);
       agl_screenshooter_take_shot(s.agl_shooter, selected->output, buf.buffer);
     } else {
       weston_screenshooter_add_listener(s.weston_shooter,
@@ -397,8 +401,7 @@ ScreenshotResult wayland_capture_screenshot(const std::string& output_name) {
         status_str = "no memory";
       else if (s.agl_done_status == AGL_SCREENSHOOTER_DONE_STATUS_BAD_BUFFER)
         status_str = "bad buffer";
-      s.result.error =
-          std::string("agl_screenshooter failed: ") + status_str;
+      s.result.error = std::string("agl_screenshooter failed: ") + status_str;
     } else {
       s.result.imageData.assign(static_cast<uint8_t*>(buf.data),
                                 static_cast<uint8_t*>(buf.data) + buf.size);

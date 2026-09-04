@@ -4,8 +4,8 @@
 
 #include <string>
 #include "RPCClient.h"
-#include "capnp/test_runner_server.capnp.h"
 #include "ScreenshotResult.h"
+#include "capnp/test_runner_server.capnp.h"
 
 class PluginWaylandScreenshooterClient : virtual public RPCClient {
  public:

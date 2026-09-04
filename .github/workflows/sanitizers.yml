@@ -48,7 +48,15 @@ jobs:
       - name: Run tests under ASan
         shell: bash
         env:
-          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:detect_leaks=1
+          # detect_odr_violation=0: client and server both compile the same
+          # capnp-generated sources; in production they run in separate processes,
+          # but the unit tests load both shared libraries in one process, causing
+          # false-positive ODR reports for those shared schema globals.
+          # detect_stack_use_after_return=0: kj's ExceptionCallback verifies it
+          # is within 64 KiB of the current stack pointer. ASan's fake-stack
+          # mechanism (detect_stack_use_after_return=1) moves stack frames outside
+          # that range and breaks this check at every RPC call site.
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:detect_leaks=1:detect_odr_violation=0:detect_stack_use_after_return=0
           # LeakSanitizer requires ptrace; disable if unavailable in the runner.
           # To suppress false positives from third-party libs, add a suppression
           # file: LSAN_OPTIONS=suppressions=.lsan_suppressions

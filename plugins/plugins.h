@@ -11,6 +11,9 @@
 #include "agl_health/AglHealth.h"
 #endif
 
+// clang-format off
+// The base-class list is preprocessor-guarded; clang-format moves the
+// leading commas onto their own lines when it reformats across #ifdef.
 class TestRunnerPlugins
     : virtual public TestRunnerService::Server
 #ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
@@ -20,6 +23,7 @@ class TestRunnerPlugins
     , public PluginAglHealth
 #endif
 {
+  // clang-format on
  public:
   TestRunnerPlugins() = default;
   ~TestRunnerPlugins() = default;

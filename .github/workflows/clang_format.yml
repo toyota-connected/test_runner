@@ -21,8 +21,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          # Pinned: the unversioned `clang-format` metapackage tracks whatever
+          # the runner image ships, so an image bump silently reformats the
+          # tree. The codebase is formatted with 14 (jammy's default).
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            clang-format
+            clang-format-14
 
       # shell: bash gives `bash -eo pipefail`; the implicit shell is `bash -e`
       # without pipefail, so the step would exit with tee's status and never
@@ -38,7 +41,7 @@ jobs:
             \( -name "*.cpp" -o -name "*.h" \) \
             ! -path "*/test/*" \
             | sort \
-            | xargs clang-format --dry-run --Werror 2>&1 | tee clang_format_output.txt
+            | xargs clang-format-14 --dry-run --Werror 2>&1 | tee clang_format_output.txt
 
       - name: Show diff on failure
         if: failure()
@@ -48,7 +51,7 @@ jobs:
             ! -path "*/test/*" \
             | sort \
             | while read f; do
-                diff <(clang-format "$f") "$f" \
+                diff <(clang-format-14 "$f") "$f" \
                   && true \
                   || echo "--- needs formatting: $f"
               done

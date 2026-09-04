@@ -11,8 +11,8 @@
 #include <cstdio>
 #include <cstring>
 
-// Interface over the POSIX/Linux syscalls used by TestRunnerRecorder and TestRunnerServer.
-// The real implementation calls through; tests inject a mock.
+// Interface over the POSIX/Linux syscalls used by TestRunnerRecorder and
+// TestRunnerServer. The real implementation calls through; tests inject a mock.
 struct SyscallInterface {
   virtual ~SyscallInterface() = default;
 
@@ -23,7 +23,8 @@ struct SyscallInterface {
   virtual struct dirent* readdir(DIR* dir) = 0;
   virtual int closedir(DIR* dir) = 0;
 
-  // ioctl with pointer arg (EVIOCG*, UI_DEV_SETUP, UI_ABS_SETUP, UI_DEV_DESTROY)
+  // ioctl with pointer arg (EVIOCG*, UI_DEV_SETUP, UI_ABS_SETUP,
+  // UI_DEV_DESTROY)
   virtual int ioctl(int fd, unsigned long request, void* arg) = 0;
   // ioctl with integer arg (UI_SET_EVBIT, UI_SET_KEYBIT, etc.)
   virtual int ioctl_int(int fd, unsigned long request, int arg) = 0;
@@ -53,7 +54,9 @@ struct RealSyscalls : SyscallInterface {
   int open(const char* path, int flags) override { return ::open(path, flags); }
   int close(int fd) override { return ::close(fd); }
   DIR* opendir(const char* path) override { return ::opendir(path); }
-  struct dirent* readdir(DIR* dir) override { return ::readdir(dir); }
+  struct dirent* readdir(DIR* dir) override {
+    return ::readdir(dir);
+  }
   int closedir(DIR* dir) override { return ::closedir(dir); }
   int ioctl(int fd, unsigned long request, void* arg) override {
     return ::ioctl(fd, request, arg);

@@ -15,7 +15,10 @@ using json = nlohmann::json;
 // libcurl helpers
 // ---------------------------------------------------------------------------
 
-static size_t curl_write_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {
+static size_t curl_write_cb(char* ptr,
+                            size_t size,
+                            size_t nmemb,
+                            void* userdata) {
   auto* buf = static_cast<std::string*>(userdata);
   buf->append(ptr, size * nmemb);
   return size * nmemb;
@@ -48,9 +51,10 @@ std::string PluginAglHealth::fetchJson(const std::string& path) {
   KJ_REQUIRE(rc == CURLE_OK, "curl GET failed", url, curl_easy_strerror(rc));
 
   long http_code = 0;
-  // Re-init just to get the status — already cleaned up, so check body is non-empty
-  // Actually we already cleaned up curl above; check rc covered transport errors.
-  // HTTP-level errors will surface as malformed JSON and throw below.
+  // Re-init just to get the status — already cleaned up, so check body is
+  // non-empty Actually we already cleaned up curl above; check rc covered
+  // transport errors. HTTP-level errors will surface as malformed JSON and
+  // throw below.
 
   return body;
 }
@@ -97,7 +101,7 @@ static void fill_cpu(::CpuSnapshot::Builder b, const json& j) {
 }
 
 static void fill_processes(capnp::List<::ProcessStats>::Builder list,
-                            const json& arr) {
+                           const json& arr) {
   for (size_t i = 0; i < arr.size(); ++i) {
     const auto& p = arr[i];
     auto proc = list[i];
@@ -120,9 +124,10 @@ static void fill_processes(capnp::List<::ProcessStats>::Builder list,
     // comm arrives as a null-terminated byte array, not a string.
     std::string comm;
     if (p.contains("comm") && p["comm"].is_array()) {
-      for (const auto &b : p["comm"]) {
+      for (const auto& b : p["comm"]) {
         auto c = b.get<uint8_t>();
-        if (c == 0) break;
+        if (c == 0)
+          break;
         comm.push_back(static_cast<char>(c));
       }
     } else {

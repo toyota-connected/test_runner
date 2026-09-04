@@ -43,6 +43,7 @@ jobs:
         run: cmake --build build --target capnp_generated
 
       - name: Run clang-tidy
+        shell: bash
         run: |
           # Run against all first-party source files; exclude third_party, test,
           # and generated capnp files.
@@ -53,7 +54,10 @@ jobs:
             | xargs clang-tidy \
                 -p build/compile_commands.json \
                 --warnings-as-errors="" \
-                2>&1 | tee clang_tidy_output.txt
+                2>&1 | tee clang_tidy_output.txt || true
+          # `|| true` keeps pipefail from aborting the step when clang-tidy
+          # exits non-zero (e.g. a compile error), so the grep gate below stays
+          # reachable and reports what was found.
           # Exit non-zero if clang-tidy reported any warnings.
           if grep -qE "warning:|error:" clang_tidy_output.txt; then
             echo "clang-tidy found issues (see above)"

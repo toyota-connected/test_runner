@@ -147,11 +147,11 @@ class PluginAglHealthClient : virtual public RPCClient {
   PluginAglHealthClient() = default;
   ~PluginAglHealthClient() = default;
 
-  AglMetricSnapshot   GetMetrics();
-  AglMemorySnapshot   GetMemory();
-  AglCpuSnapshot      GetCpu();
+  AglMetricSnapshot GetMetrics();
+  AglMemorySnapshot GetMemory();
+  AglCpuSnapshot GetCpu();
   std::vector<AglProcessStats> GetProcesses(uint32_t limit = 100);
-  AglNetworkSnapshot  GetNetwork();
+  AglNetworkSnapshot GetNetwork();
   AglSecuritySnapshot GetSecurity();
   AglSchedulerSnapshot GetScheduler();
   void SetDaemonUrl(const std::string& url);

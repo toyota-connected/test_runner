@@ -252,7 +252,8 @@ ScreenshotResult PluginWestonScreenshooter::capture() {
         static_cast<size_t>(stride) * static_cast<size_t>(height);
 
     // Create anonymous shared memory suitable for wl_shm
-    int fd = static_cast<int>(syscall(SYS_memfd_create, "test-runner-screenshot", 0));
+    int fd = static_cast<int>(
+        syscall(SYS_memfd_create, "test-runner-screenshot", 0));
     if (fd < 0) {
       s.result.error = "memfd_create failed";
       goto cleanup;

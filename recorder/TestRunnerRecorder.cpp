@@ -27,10 +27,10 @@ const static struct libinput_interface interface = {
 #endif
 
 TestRunnerRecorder::TestRunnerRecorder(char* filename,
-                         uint32_t length,
-                         bool continuous,
-                         std::string input_directory,
-                         SyscallInterface* syscalls)
+                                       uint32_t length,
+                                       bool continuous,
+                                       std::string input_directory,
+                                       SyscallInterface* syscalls)
     : input_dir(std::move(input_directory)),
       m_recording_length(length * 1000),
       m_continuous(continuous),
@@ -49,7 +49,9 @@ TestRunnerRecorder::TestRunnerRecorder(char* filename,
   setup_xkb();
   if (!continuous) {
     std::string filename_str = filename;
-    m_filename = "/tmp/" + std::filesystem::path(filename_str).filename().string() + ".rrc";
+    m_filename = "/tmp/" +
+                 std::filesystem::path(filename_str).filename().string() +
+                 ".rrc";
     m_recording_path = m_filename;
   } else {
     /* Continuous recording will append a timestamp when completed. */
@@ -58,9 +60,12 @@ TestRunnerRecorder::TestRunnerRecorder(char* filename,
 }
 
 TestRunnerRecorder::~TestRunnerRecorder() {
-  if (m_xkb_state)   xkb_state_unref(m_xkb_state);
-  if (m_xkb_keymap)  xkb_keymap_unref(m_xkb_keymap);
-  if (m_xkb_ctx)     xkb_context_unref(m_xkb_ctx);
+  if (m_xkb_state)
+    xkb_state_unref(m_xkb_state);
+  if (m_xkb_keymap)
+    xkb_keymap_unref(m_xkb_keymap);
+  if (m_xkb_ctx)
+    xkb_context_unref(m_xkb_ctx);
 
 #if ENABLE_LIBINPUT
   // Restore Accel Profiles
@@ -94,9 +99,11 @@ void TestRunnerRecorder::setup_xkb() {
   }
   // Use env vars (XKB_DEFAULT_LAYOUT etc.) or system default if unset.
   xkb_rule_names rules{};
-  m_xkb_keymap = xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  m_xkb_keymap =
+      xkb_keymap_new_from_names(m_xkb_ctx, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
   if (!m_xkb_keymap) {
-    spdlog::warn("XKB keymap compilation failed — keysyms will not be recorded");
+    spdlog::warn(
+        "XKB keymap compilation failed — keysyms will not be recorded");
     xkb_context_unref(m_xkb_ctx);
     m_xkb_ctx = nullptr;
     return;
@@ -170,13 +177,13 @@ void TestRunnerRecorder::findDevices() {
               if (has_mt_slot && has_mt_tracking_id) {
                 indev.type = MULTITOUCHSCREEN;
                 type_str = "Multi-Touchscreen";
-                result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_MT_POSITION_X),
-                                           &indev.abs_range_x);
+                result = m_syscalls->ioctl(
+                    indev.fd, EVIOCGABS(ABS_MT_POSITION_X), &indev.abs_range_x);
                 if (result < 0) {
                   spdlog::warn("Couldn't retrieve device abs range x");
                 }
-                result = m_syscalls->ioctl(indev.fd, EVIOCGABS(ABS_MT_POSITION_Y),
-                                           &indev.abs_range_y);
+                result = m_syscalls->ioctl(
+                    indev.fd, EVIOCGABS(ABS_MT_POSITION_Y), &indev.abs_range_y);
                 if (result < 0) {
                   spdlog::warn("Couldn't retrieve device abs range y");
                 }
@@ -281,7 +288,8 @@ std::vector<in_device_s> TestRunnerRecorder::listDevices() {
   return available_devices;
 }
 
-void TestRunnerRecorder::setDevicesToRecord(const std::vector<in_device_s>& devices) {
+void TestRunnerRecorder::setDevicesToRecord(
+    const std::vector<in_device_s>& devices) {
   m_device_mask = 0;
   for (int i = 0; i < available_devices.size(); i++) {
     bool record_device = false;
@@ -351,8 +359,8 @@ void TestRunnerRecorder::Record() {
       }
     }
 
-    int num_ready = m_syscalls->select(max_fd + 1, &read_fds, nullptr, nullptr,
-                                       &timeout);
+    int num_ready =
+        m_syscalls->select(max_fd + 1, &read_fds, nullptr, nullptr, &timeout);
     if (num_ready == 0) {
       continue;
     }
@@ -364,8 +372,7 @@ void TestRunnerRecorder::Record() {
       for (in_device_s in_device : devices_to_record) {
         if (FD_ISSET(in_device.fd, &read_fds)) {
           struct input_event ev {};
-          ssize_t bytes_read =
-              m_syscalls->read(in_device.fd, &ev, sizeof(ev));
+          ssize_t bytes_read = m_syscalls->read(in_device.fd, &ev, sizeof(ev));
           if (bytes_read > 0) {
             auto ts_abs = current_time_ms();
 
@@ -393,7 +400,8 @@ void TestRunnerRecorder::Record() {
 
             // Resolve keysym for keyboard key events before updating XKB state.
             uint32_t keysym = 0;
-            if (ev.type == EV_KEY && in_device.type == KEYBOARD && m_xkb_state) {
+            if (ev.type == EV_KEY && in_device.type == KEYBOARD &&
+                m_xkb_state) {
               auto xkb_code = static_cast<xkb_keycode_t>(ev.code + 8);
               keysym = xkb_state_key_get_one_sym(m_xkb_state, xkb_code);
               if (ev.value == 1) {
@@ -461,7 +469,8 @@ void TestRunnerRecorder::processBuffer() {
   while (!is_done()) {
     {
       std::unique_lock<std::mutex> lk(stop_mtx);
-      stop_cv.wait_for(lk, std::chrono::seconds(1), [this] { return m_stop.load(); });
+      stop_cv.wait_for(lk, std::chrono::seconds(1),
+                       [this] { return m_stop.load(); });
     }
     auto current_time = current_time_ms();
     std::lock_guard<std::mutex> lock(buf_mtx);
@@ -512,8 +521,8 @@ void TestRunnerRecorder::processBuffer() {
 }
 
 void TestRunnerRecorder::transform_touch_coordinates(in_device_s device,
-                                              int& val,
-                                              int axis) {
+                                                     int& val,
+                                                     int axis) {
   double native_range = 0.0;
   double transform_val = 0.0;
 

@@ -21,18 +21,27 @@ jobs:
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+          # Pinned: the unversioned `clang-format` metapackage tracks whatever
+          # the runner image ships, so an image bump silently reformats the
+          # tree. The codebase is formatted with 14 (jammy's default).
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            clang-format
+            clang-format-14
 
+      # shell: bash gives `bash -eo pipefail`; the implicit shell is `bash -e`
+      # without pipefail, so the step would exit with tee's status and never
+      # fail. Applied per-step on purpose -- see unit_tests.yml, where the
+      # summary step pipes into grep and would break under pipefail.
       - name: Check formatting
+        shell: bash
         run: |
+          # clang-format --Werror exits non-zero on any formatting difference;
+          # pipefail is what lets that status survive the tee, which is here so
+          # the output is still captured for the artifact on failure.
           find recorder server client plugins \
             \( -name "*.cpp" -o -name "*.h" \) \
             ! -path "*/test/*" \
             | sort \
-            | xargs clang-format --dry-run --Werror 2>&1 | tee clang_format_output.txt
-          # clang-format --Werror exits non-zero on any formatting difference;
-          # the tee above preserves output for the artifact even on failure.
+            | xargs clang-format-14 --dry-run --Werror 2>&1 | tee clang_format_output.txt
 
       - name: Show diff on failure
         if: failure()
@@ -42,7 +51,7 @@ jobs:
             ! -path "*/test/*" \
             | sort \
             | while read f; do
-                diff <(clang-format "$f") "$f" \
+                diff <(clang-format-14 "$f") "$f" \
                   && true \
                   || echo "--- needs formatting: $f"
               done

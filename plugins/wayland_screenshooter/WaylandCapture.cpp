@@ -24,8 +24,9 @@ WaylandOutputInfo* select_output(WaylandCaptureBase* s,
                                  const std::string& preferred) {
   if (!preferred.empty()) {
     for (auto& o : s->outputs)
-      if (o.model == preferred)
+      if (o.name == preferred)
         return &o;
+    return nullptr;  // requested output not found — don't silently use wrong output
   }
   if (!s->outputs.empty())
     return &s->outputs[0];
@@ -65,11 +66,21 @@ static void on_output_mode(void* data,
 static void on_output_done(void*, wl_output*) {}
 static void on_output_scale(void*, wl_output*, int32_t) {}
 
+static void on_output_name(void* data, wl_output* output, const char* name) {
+  auto* s = static_cast<WaylandCaptureBase*>(data);
+  if (auto* o = find_output(s, output))
+    o->name = name ? name : "";
+}
+
+static void on_output_description(void*, wl_output*, const char*) {}
+
 const wl_output_listener wayland_output_listener = {
     on_output_geometry,
     on_output_mode,
     on_output_done,
     on_output_scale,
+    on_output_name,
+    on_output_description,
 };
 
 bool bind_common_globals(WaylandCaptureBase* s,
@@ -85,7 +96,7 @@ bool bind_common_globals(WaylandCaptureBase* s,
   if (strcmp(interface, "wl_output") == 0) {
     WaylandOutputInfo info;
     info.output = static_cast<wl_output*>(wl_registry_bind(
-        registry, name, &wl_output_interface, version < 3 ? version : 3));
+        registry, name, &wl_output_interface, version < 4 ? version : 4));
     s->outputs.push_back(info);
     wl_output_add_listener(s->outputs.back().output, &wayland_output_listener,
                            s);
@@ -357,12 +368,15 @@ ScreenshotResult wayland_capture_screenshot(const std::string& output_name) {
     SPDLOG_INFO("Using weston_screenshooter protocol");
 
   for (auto& o : s.outputs)
-    SPDLOG_INFO("Output: model='{}' {}x{}", o.model, o.width, o.height);
+    SPDLOG_INFO("Output: name='{}' model='{}' {}x{}", o.name, o.model, o.width, o.height);
 
   {
     auto* selected = select_output(&s, output_name);
     if (!selected) {
-      s.result.error = "no wl_output found";
+      if (!output_name.empty())
+        s.result.error = "output '" + output_name + "' not found";
+      else
+        s.result.error = "no wl_output found";
       goto cleanup;
     }
     if (selected->width <= 0 || selected->height <= 0) {
@@ -370,7 +384,7 @@ ScreenshotResult wayland_capture_screenshot(const std::string& output_name) {
       goto cleanup;
     }
 
-    SPDLOG_INFO("Capturing output '{}'", selected->model);
+    SPDLOG_INFO("Capturing output '{}'", selected->name);
     const int32_t width = selected->width;
     const int32_t height = selected->height;
 

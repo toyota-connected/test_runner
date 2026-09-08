@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 # SPDX-License-Identifier: GPLv3
-@0x93c6e562d9faf9bd;
+@0xa1b2c3d4e5f60001;
 
 # Plugin: WaylandScreenshooter
 # Captures a screenshot via the Wayland screenshooter protocol. At runtime the

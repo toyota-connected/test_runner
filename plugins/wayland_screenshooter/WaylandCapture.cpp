@@ -26,7 +26,8 @@ WaylandOutputInfo* select_output(WaylandCaptureBase* s,
     for (auto& o : s->outputs)
       if (o.name == preferred)
         return &o;
-    return nullptr;  // requested output not found — don't silently use wrong output
+    return nullptr;  // requested output not found — don't silently use wrong
+                     // output
   }
   if (!s->outputs.empty())
     return &s->outputs[0];
@@ -75,12 +76,8 @@ static void on_output_name(void* data, wl_output* output, const char* name) {
 static void on_output_description(void*, wl_output*, const char*) {}
 
 const wl_output_listener wayland_output_listener = {
-    on_output_geometry,
-    on_output_mode,
-    on_output_done,
-    on_output_scale,
-    on_output_name,
-    on_output_description,
+    on_output_geometry, on_output_mode, on_output_done,
+    on_output_scale,    on_output_name, on_output_description,
 };
 
 bool bind_common_globals(WaylandCaptureBase* s,
@@ -368,7 +365,8 @@ ScreenshotResult wayland_capture_screenshot(const std::string& output_name) {
     SPDLOG_INFO("Using weston_screenshooter protocol");
 
   for (auto& o : s.outputs)
-    SPDLOG_INFO("Output: name='{}' model='{}' {}x{}", o.name, o.model, o.width, o.height);
+    SPDLOG_INFO("Output: name='{}' model='{}' {}x{}", o.name, o.model, o.width,
+                o.height);
 
   {
     auto* selected = select_output(&s, output_name);

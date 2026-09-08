@@ -13,7 +13,8 @@
 struct WaylandOutputInfo {
   wl_output* output{nullptr};
   std::string
-      model;  // connector name from wl_output geometry event (e.g. "DP-1")
+      name;  // connector name from wl_output.name event (v4), e.g. "HDMI-A-1"
+  std::string model;  // EDID model string from wl_output.geometry
   int32_t width{0};
   int32_t height{0};
 };
@@ -35,8 +36,9 @@ struct WaylandShmBuffer {
 
 WaylandOutputInfo* find_output(WaylandCaptureBase* s, wl_output* output);
 
-// Select output by connector name; fall back to first output if not found.
-// Pass empty string to skip name matching and always pick the first output.
+// Select output by connector name (wl_output.name, e.g. "HDMI-A-1").
+// Returns nullptr if preferred is non-empty and no output matches, or if there
+// are no outputs at all.  Pass empty string to pick the first available output.
 WaylandOutputInfo* select_output(WaylandCaptureBase* s,
                                  const std::string& preferred = "");
 

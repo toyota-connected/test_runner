@@ -32,7 +32,9 @@ test_runner is a Cap'n Proto RPC service that creates virtual input devices via 
 │          │   devices)  │  │ .rrc files in /tmp/  │               │
 │          └────────────┘  └──────────────────────┘               │
 │                                                                  │
-│  WestonScreenshooter plugin ──► Wayland compositor               │
+│  Plugins (toggle via ENABLE_PLUGIN_*):                           │
+│    WestonScreenshooter ──► Weston compositor                     │
+│    AglHealth           ──► system health via libcurl             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -50,12 +52,14 @@ test_runner is a Cap'n Proto RPC service that creates virtual input devices via 
 ## Cap'n Proto Schema Layers
 
 ```
-capnp/test_runner.capnp          — core Input and Recorder interfaces
-capnp/test_runner_server.capnp   — TestRunnerService extends (Input, Recorder, Plugins)
-plugins/plugins.capnp            — Plugins extends (Screenshooter)
-plugins/weston_screenshooter/
-  weston_screenshooter.capnp     — Screenshooter interface
+capnp/test_runner.capnp                          — core Input and Recorder interfaces
+capnp/test_runner_server.capnp                    — TestRunnerService extends (Input, Recorder, Plugins)
+plugins/plugins.capnp                             — Plugins extends (Screenshooter, AglHealth)
+plugins/weston_screenshooter/weston_screenshooter.capnp — Screenshooter interface
+plugins/agl_health/agl_health.capnp               — AglHealth interface
 ```
+
+All plugin schemas are always compiled regardless of `ENABLE_PLUGIN_*` flags so the composite `Plugins` interface stays ABI-stable. Disabled plugins fall back to Cap'n Proto's default "unimplemented" response.
 
 `TestRunnerService` is the single bootstrap capability the server exports. Clients obtain it from `capnp::TwoPartyClient::bootstrap()` and cast it to `TestRunnerService`.
 
@@ -96,11 +100,22 @@ Plugins add new Cap'n Proto interfaces to `TestRunnerService` without modifying 
 
 1. Defines a `.capnp` schema file exporting an interface.
 2. Provides a C++ class that inherits `virtual public TestRunnerService::Server` and implements the interface methods.
-3. Is listed in `plugins/plugins.capnp` (added to `extends`) and in `cmake/plugins.cmake`.
+3. Is listed in `plugins/plugins.capnp` (added to `extends`) and in the `TEST_RUNNER_PLUGINS` list in `cmake/plugins.cmake`.
 
 `TestRunnerServer` inherits from both `TestRunnerService::Server` (for core interfaces) and `TestRunnerPlugins` (which inherits all plugin classes). Cap'n Proto's virtual dispatch resolves the correct implementation per method.
 
-The reference plugin is `WestonScreenshooter`, which uses the Weston `screenshooter` Wayland protocol extension to capture a raw BGRA framebuffer.
+### Toggling Plugins
+
+Each plugin has a CMake option `ENABLE_PLUGIN_<NAME>` (default `ON`). Disabling a plugin excludes its C++ sources from the build via `#ifdef` guards in `plugins.h` / `plugins_client.h`, but the plugin's `.capnp` schema is always compiled so the wire-format `Plugins` interface stays intact. Clients calling a disabled plugin's methods receive Cap'n Proto's "unimplemented" error. To disable all plugins at once, pass `-DDISABLE_PLUGINS=ON`.
+
+The `TEST_RUNNER_PLUGINS` list in `cmake/plugins.cmake` is the single source of truth — `add_subdirectory()`, schema collection, and compile-definition guards are all driven from it. To add a new plugin, append its directory name to this list and follow the convention that the schema file is `<dir>/<dir>.capnp`.
+
+### Shipped Plugins
+
+| Plugin | Option | Description |
+|--------|--------|-------------|
+| `weston_screenshooter` | `ENABLE_PLUGIN_WESTON_SCREENSHOOTER` | Captures the Weston compositor framebuffer via the Wayland `screenshooter` protocol |
+| `agl_health` | `ENABLE_PLUGIN_AGL_HEALTH` | Queries AGL system health status via libcurl |
 
 ## RPC Transport
 

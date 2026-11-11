@@ -16,16 +16,11 @@
    with `#ifdef ENABLE_PLUGIN_MYPLUGIN` around the include and inheritance.
 
 4. In `cmake/plugins.cmake`:
-   - Add `option(ENABLE_PLUGIN_MYPLUGIN "..." ON)` and the matching
-     `add_compile_definitions(ENABLE_PLUGIN_MYPLUGIN)` block.
-
-5. In `plugins/CMakeLists.txt`:
-   - Add `add_subdirectory(my_plugin)` inside an `if(ENABLE_PLUGIN_MYPLUGIN)` block.
-   - Add the plugin's `.capnp` schema to the unconditional
-     `TEST_RUNNER_PLUGIN_CAPNP_SCHEMAS` list (schemas are always compiled;
-     disabled plugins fall back to capnp's "unimplemented" response).
+   - Add `my_plugin` to the `TEST_RUNNER_PLUGINS` list. The `ENABLE_PLUGIN_MY_PLUGIN`
+     option, `add_compile_definitions`, `add_subdirectory`, and capnp schema collection
+     are all driven automatically from this list.
 
 6. (Optional) In `plugins/plugins.cpp`
 	- Add any initialization steps that can't be done in the constructor to `init_plugins()`
 
-See `plugins/weston_screenshooter/` for a complete example.
+See `plugins/wayland_screenshooter/` for a complete example.

@@ -4,8 +4,8 @@
 
 #include "capnp/test_runner_server.capnp.h"
 
-#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
-#include "weston_screenshooter/WestonScreenshooter.h"
+#ifdef ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER
+#include "wayland_screenshooter/WaylandScreenshooter.h"
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
 #include "agl_health/AglHealth.h"
@@ -16,8 +16,8 @@
 // leading commas onto their own lines when it reformats across #ifdef.
 class TestRunnerPlugins
     : virtual public TestRunnerService::Server
-#ifdef ENABLE_PLUGIN_WESTON_SCREENSHOOTER
-    , public PluginWestonScreenshooter
+#ifdef ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER
+    , public PluginWaylandScreenshooter
 #endif
 #ifdef ENABLE_PLUGIN_AGL_HEALTH
     , public PluginAglHealth

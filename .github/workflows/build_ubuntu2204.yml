@@ -27,7 +27,7 @@ jobs:
           - name: no-plugins
             cmake_extra: "-DDISABLE_PLUGINS=ON"
           - name: custom-plugins
-            cmake_extra: "-DENABLE_PLUGIN_WESTON_SCREENSHOOTER=OFF"
+            cmake_extra: "-DENABLE_PLUGIN_WAYLAND_SCREENSHOOTER=OFF"
 
     steps:
       - name: Checkout

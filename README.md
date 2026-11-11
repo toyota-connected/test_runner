@@ -9,7 +9,7 @@ Remote test framework for automated testing of [ivi-homescreen](https://github.c
 
 - **Remote Input** — mouse, keyboard, touchscreen, multi-touch, and raw passthrough over the network
 - **Recording** — capture `/dev/input` events to file for later replay
-- **Screenshot** — capture Weston compositor output (via the WestonScreenshooter plugin)
+- **Screenshot** — capture compositor output (via the WaylandScreenshooter plugin; auto-detects AGL and Weston)
 - **Plugin system** — add new Cap'n Proto interfaces without touching core server code
 
 > **Security notice:** test_runner binds to all network interfaces on port 4004 with no authentication or encryption. It is designed exclusively for isolated test lab networks. Never expose this service on an untrusted network.
@@ -94,7 +94,7 @@ scripts/send_touch.py --host localhost:4004
 
 ## Plugin System
 
-Plugins extend the server with new Cap'n Proto interfaces. WestonScreenshooter is the reference implementation. See `plugins/README.md` for instructions on creating plugins.
+Plugins extend the server with new Cap'n Proto interfaces. WaylandScreenshooter is the reference implementation. See `plugins/README.md` for instructions on creating plugins.
 
 ## Protocol
 

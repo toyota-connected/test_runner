@@ -4,7 +4,7 @@
 # Single list of plugins — add_subdirectory(), capnp schema collection, and
 # compile-definition guards are all driven from this list.
 set(TEST_RUNNER_PLUGINS
-    weston_screenshooter
+    wayland_screenshooter
     agl_health
 )
 
@@ -20,4 +20,3 @@ foreach(plugin IN LISTS TEST_RUNNER_PLUGINS)
     add_compile_definitions(ENABLE_PLUGIN_${plugin_upper})
   endif ()
 endforeach()
-

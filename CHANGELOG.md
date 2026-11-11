@@ -11,14 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`DISABLE_PLUGINS` CMake option** — pass `-DDISABLE_PLUGINS=ON` to turn off all plugins at once
 - **CI plugin matrix** — Ubuntu 22.04 workflow now builds all-plugins, no-plugins, and custom-plugins configurations
+- **`outputName` parameter on `takeScreenshot`** — callers can now target a specific wl_output by connector name; defaults to first available output
 
 ### Fixed
 
 - **Plugin toggling** — `ENABLE_PLUGIN_*` CMake options now correctly exclude disabled plugins from the build via `#ifdef` guards in `plugins.h` and `plugins_client.h`
+- **Screenshot on compositor disconnect** — `takeScreenshot` now reports an error instead of silently returning an empty frame when the compositor disconnects before the done event
 
 ### Changed
 
 - **Plugin list consolidation** — `TEST_RUNNER_PLUGINS` in `cmake/plugins.cmake` is now the single source of truth for plugin registration; `add_subdirectory()` and capnp schema collection are driven from it
+- **Unified `wayland_screenshooter` plugin** — replaces separate `weston_screenshooter` and `agl_screenshooter` plugins; auto-detects which screenshooter protocol the compositor advertises at runtime (`ENABLE_PLUGIN_WAYLAND_SCREENSHOOTER` replaces the old per-compositor flags)
 
 ## [0.1.0] — 2026-05-07
 
@@ -28,8 +31,8 @@ Initial public release.
 
 - **Input injection** — remote mouse, keyboard, single-touch, multi-touch, and raw `EV_*` passthrough via `uinput`
 - **Recorder** — capture `/dev/input` events to `.rrc` files; supports fixed-length and continuous (rolling-window) modes; up to 20 concurrent recorder instances
-- **Plugin system** — extend the server with new Cap'n Proto interfaces without modifying core code; `WestonScreenshooter` is the reference plugin
-- **WestonScreenshooter plugin** — capture the Weston compositor framebuffer over the Wayland `screenshooter` protocol
+- **Plugin system** — extend the server with new Cap'n Proto interfaces without modifying core code; `WaylandScreenshooter` is the reference plugin
+- **WaylandScreenshooter plugin** — capture the compositor framebuffer over the Wayland screenshooter protocol (auto-detects `agl_screenshooter` and `weston_screenshooter`)
 - **C++ client library** (`libTestRunnerClient.so`) — typed wrappers for all RPC calls with a 10-second per-call timeout
 - **Python scripts** — `getScreenshot.py`, `getSnapshot.py`, `send_touch.py`
 - **Standalone recorder** (`TestRunner-Recorder`) — record input events without running the full server

@@ -1,5 +1,10 @@
 # SPDX-FileCopyrightText: (c) 2026 Toyota Connected North America
 # SPDX-License-Identifier: GPLv3
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+  pkg_check_modules(WAYLAND_CLIENT wayland-client)
+endif()
+
 add_executable(test_runner_unit_tests
         test_server.cpp
         test_client.cpp
@@ -9,6 +14,11 @@ add_executable(test_runner_unit_tests
 
 if(BUILD_RECORDER)
   target_sources(test_runner_unit_tests PRIVATE test_recorder.cpp)
+endif()
+
+if(WAYLAND_CLIENT_FOUND)
+  target_sources(test_runner_unit_tests PRIVATE test_wayland_screenshooter.cpp)
+  target_include_directories(test_runner_unit_tests PRIVATE ${WAYLAND_CLIENT_INCLUDE_DIRS})
 endif()
 
 target_include_directories(test_runner_unit_tests PRIVATE
